@@ -1,0 +1,204 @@
+#!/bin/bash
+# Superbot launcher — assembles live context and starts claude
+# Supports self-restart: touch ~/.superbot/.restart from within a session
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+
+DIR="$HOME/.superbot"
+TEAM_DIR="$HOME/.claude/teams/superbot"
+PLUGIN_ROOT="$(cd "$(dirname "$0")" && pwd)"
+RESTART_FLAG="$DIR/.restart"
+LAUNCHER_PID=$$
+
+# Guard: run setup if not initialized
+if [[ ! -d "$DIR" ]]; then
+  echo "Superbot not set up yet. Running setup..."
+  "$PLUGIN_ROOT/scripts/setup.sh"
+fi
+
+# --- Context assembly function (re-runs on each restart) ---
+assemble_context() {
+  local CWD="$(pwd)"
+  local IS_GIT="false"
+  if git -C "$CWD" rev-parse --is-inside-work-tree &>/dev/null; then
+    IS_GIT="true"
+  fi
+  local CURRENT_DATE="$(date '+%Y-%m-%d')"
+  local OS_VERSION="$(uname -s) $(uname -r)"
+  local PLATFORM="$(uname -s | tr '[:upper:]' '[:lower:]')"
+
+  CONTEXT=""
+
+  # Environment
+  CONTEXT+="# Environment"$'\n'
+  CONTEXT+="- Primary working directory: $CWD"$'\n'
+  CONTEXT+="- Is a git repository: $IS_GIT"$'\n'
+  CONTEXT+="- Platform: $PLATFORM"$'\n'
+  CONTEXT+="- OS Version: $OS_VERSION"$'\n'
+  CONTEXT+="- Current date: $CURRENT_DATE"$'\n'
+  CONTEXT+="- Knowledge cutoff: May 2025"$'\n'
+  CONTEXT+="- Model family: Claude 4.5/4.6 (Opus 4.6: claude-opus-4-6, Sonnet 4.5: claude-sonnet-4-5-20250929, Haiku 4.5: claude-haiku-4-5-20251001)"$'\n'
+  CONTEXT+=$'\n---\n\n'
+
+  # Claude base system prompt
+  if [[ -f "$PLUGIN_ROOT/templates/CLAUDE_SYSTEM_PROMPT.md" ]]; then
+    CONTEXT+="$(cat "$PLUGIN_ROOT/templates/CLAUDE_SYSTEM_PROMPT.md")"
+    CONTEXT+=$'\n\n---\n\n'
+  fi
+
+  # Superbot system instructions
+  if [[ -f "$PLUGIN_ROOT/templates/SYSTEM.md" ]]; then
+    CONTEXT+="$(cat "$PLUGIN_ROOT/templates/SYSTEM.md")"
+    CONTEXT+=$'\n\n---\n\n'
+  fi
+
+  # Identity, User, Memory, Heartbeat
+  for file in IDENTITY USER MEMORY HEARTBEAT; do
+    if [[ -f "$DIR/$file.md" ]]; then
+      CONTEXT+="## $file"$'\n'
+      CONTEXT+="$(cat "$DIR/$file.md")"
+      CONTEXT+=$'\n\n---\n\n'
+    fi
+  done
+
+  # Today's daily notes
+  local TODAY="$DIR/daily/$(date '+%Y-%m-%d').md"
+  if [[ -f "$TODAY" ]]; then
+    CONTEXT+="## Today's Notes"$'\n'
+    CONTEXT+="$(cat "$TODAY")"
+    CONTEXT+=$'\n\n---\n\n'
+  fi
+
+  # Recent daily notes (today + yesterday)
+  local YESTERDAY="$DIR/daily/$(date -v-1d '+%Y-%m-%d' 2>/dev/null || date -d 'yesterday' '+%Y-%m-%d' 2>/dev/null).md"
+  if [[ -f "$YESTERDAY" ]]; then
+    CONTEXT+="## Yesterday's Notes"$'\n'
+    CONTEXT+="$(cat "$YESTERDAY")"
+    CONTEXT+=$'\n\n---\n\n'
+  fi
+
+  # Project dashboard
+  if ls "$DIR/projects"/*/project.json &>/dev/null; then
+    CONTEXT+="## Projects"$'\n'
+    for proj_json in "$DIR/projects"/*/project.json; do
+      proj_name=$(jq -r '.name' "$proj_json")
+      proj_status=$(jq -r '.status' "$proj_json")
+      proj_priority=$(jq -r '.priority // "medium"' "$proj_json")
+      proj_dir=$(dirname "$proj_json")
+      pending=$(grep -rl '"status":"pending"' "$proj_dir/tasks/" 2>/dev/null | wc -l | tr -d ' ')
+      in_progress=$(grep -rl '"status":"in_progress"' "$proj_dir/tasks/" 2>/dev/null | wc -l | tr -d ' ')
+      CONTEXT+="- **$proj_name** [$proj_status, $proj_priority] — ${pending} pending, ${in_progress} in progress"$'\n'
+    done
+    CONTEXT+=$'\n\n---\n\n'
+  fi
+
+  # Active sessions dashboard
+  local SESSIONS_FILE="$DIR/sessions.json"
+  if [[ -f "$SESSIONS_FILE" ]]; then
+    local ACTIVE_COUNT
+    ACTIVE_COUNT=$(jq '[.sessions[] | select(.status == "active")] | length' "$SESSIONS_FILE" 2>/dev/null)
+    if [[ "$ACTIVE_COUNT" -gt 0 ]]; then
+      CONTEXT+="## Active Sessions ($ACTIVE_COUNT)"$'\n'
+      CONTEXT+=$(jq -r '.sessions[] | select(.status == "active") | "- **\(.name)** [\(.type)] — \(.slackThread.channel // "no thread")"' "$SESSIONS_FILE" 2>/dev/null)
+      CONTEXT+=$'\n\n---\n\n'
+    fi
+  fi
+}
+
+# --- Restart background daemons (Slack bot, heartbeat, scheduler) ---
+restart_daemons() {
+  local LAUNCH_DIR="$HOME/Library/LaunchAgents"
+  for plist in com.claude.superbot-slack com.claude.superbot-heartbeat com.claude.superbot-scheduler; do
+    if [[ -f "$LAUNCH_DIR/$plist.plist" ]]; then
+      launchctl unload "$LAUNCH_DIR/$plist.plist" 2>/dev/null
+      launchctl load "$LAUNCH_DIR/$plist.plist" 2>/dev/null
+      echo "  Restarted $plist"
+    fi
+  done
+}
+
+# --- Find the most recent session ID for this project ---
+find_session_id() {
+  # Claude stores sessions as .jsonl files in ~/.claude/projects/<encoded-cwd>/
+  local CWD_ENCODED
+  CWD_ENCODED=$(pwd | sed 's|/|-|g')
+  local PROJECT_DIR="$HOME/.claude/projects/$CWD_ENCODED"
+  if [[ -d "$PROJECT_DIR" ]]; then
+    local LATEST
+    LATEST=$(ls -t "$PROJECT_DIR"/*.jsonl 2>/dev/null | head -1)
+    if [[ -n "$LATEST" ]]; then
+      basename "$LATEST" .jsonl
+    fi
+  fi
+}
+
+# --- Main loop with restart support ---
+rm -f "$RESTART_FLAG"
+RESUME_SESSION=""
+
+while true; do
+  # Assemble fresh context each iteration
+  assemble_context
+
+  # Start watchdog: monitors for restart flag, kills claude when found
+  (
+    while true; do
+      sleep 1
+      if [[ -f "$RESTART_FLAG" ]]; then
+        # Kill direct children of the launcher (the claude process)
+        pkill -INT -P $LAUNCHER_PID 2>/dev/null
+        exit 0
+      fi
+    done
+  ) &
+  WATCHDOG_PID=$!
+
+  # Build claude args
+  CLAUDE_ARGS=(
+    --system-prompt "$CONTEXT"
+    --dangerously-skip-permissions
+    --plugin-dir "$PLUGIN_ROOT"
+    --team-name superbot
+    --agent-name superbot
+    --agent-id superbot@superbot
+  )
+
+  # If resuming from a restart, add --resume with the session ID
+  if [[ -n "$RESUME_SESSION" ]]; then
+    CLAUDE_ARGS+=(--resume "$RESUME_SESSION")
+  fi
+
+  # Run claude (foreground, gets full terminal)
+  if [[ -n "$RESUME_SESSION" ]]; then
+    # Restart: send a kickoff message instead of original CLI args
+    claude "${CLAUDE_ARGS[@]}" "Session restarted. Continue where you left off."
+  else
+    # First run: pass through any user-provided CLI args
+    claude "${CLAUDE_ARGS[@]}" "$@"
+  fi
+
+  # Claude exited — clean up watchdog
+  kill $WATCHDOG_PID 2>/dev/null
+  wait $WATCHDOG_PID 2>/dev/null
+
+  # Check if this was a restart request
+  if [[ -f "$RESTART_FLAG" ]]; then
+    rm -f "$RESTART_FLAG"
+
+    # Grab the session ID before restarting
+    RESUME_SESSION=$(find_session_id)
+
+    echo ""
+    if [[ -n "$RESUME_SESSION" ]]; then
+      echo "Superbot restarting — resuming session $RESUME_SESSION"
+    else
+      echo "Superbot restarting — fresh session (no session ID found)"
+    fi
+    restart_daemons
+    echo ""
+    continue
+  fi
+
+  # Normal exit — clear resume state
+  RESUME_SESSION=""
+  break
+done

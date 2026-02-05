@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <title>Getting Started — Superbot Docs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0a0a0a',
+            surface: '#141414',
+            parchment: '#d4cdc4',
+            stone: '#706b63',
+            sand: '#c4a882', ember: '#DC504A',
+            moss: '#8a9a7b',
+            border: '#1f1f1e',
+            codebg: '#111110',
+          },
+          fontFamily: {
+            mono: ['"Space Mono"', 'monospace'],
+            heading: ['"Space Mono"', 'monospace'],
+            body: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: #2a2a28; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a38; }
+
+    /* Selection */
+    ::selection { background: rgba(196, 168, 130, 0.25); color: #d4cdc4; }
+
+    /* Fade-in animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .fade-up {
+      opacity: 0;
+      animation: fadeUp 0.6s ease-out forwards;
+    }
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    .delay-5 { animation-delay: 0.5s; }
+    .delay-6 { animation-delay: 0.6s; }
+    .delay-7 { animation-delay: 0.7s; }
+    .delay-8 { animation-delay: 0.8s; }
+
+    /* Sidebar active indicator */
+    .nav-link { position: relative; transition: color 0.2s ease, background 0.2s ease; }
+    .nav-link::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      height: 0;
+      background: #DC504A;
+      transition: height 0.2s ease;
+    }
+    .nav-link:hover::before, .nav-link.active::before { height: 60%; }
+    .nav-link.active { color: #DC504A; }
+
+    /* Intersection Observer reveals */
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Mobile sidebar */
+    @media (max-width: 1024px) {
+      .sidebar-panel {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      .sidebar-panel.open {
+        transform: translateX(0);
+      }
+    }
+  </style>
+</head>
+<body class="bg-ink text-parchment font-body leading-relaxed min-h-screen">
+
+  <!-- Mobile toggle -->
+  <button id="mobile-toggle" class="lg:hidden fixed top-5 left-5 z-[200] bg-surface border border-border rounded px-2.5 py-2 text-parchment/70 hover:text-parchment transition-colors">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/50 z-[90] hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar-panel w-[260px] flex-shrink-0 bg-surface border-r border-border fixed top-0 left-0 bottom-0 z-[100] overflow-y-auto lg:translate-x-0">
+      <div class="px-6 pt-8 pb-6 border-b border-border">
+        <a href="index.html" class="no-underline">
+          <img src="superbotlogo.svg" alt="superbot" class="h-6">
+          <span class="text-stone text-xs tracking-[0.15em] uppercase mt-1 block">documentation</span>
+        </a>
+      </div>
+      <nav class="px-4 py-6 space-y-1">
+        <a href="index.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Home</a>
+        <a href="getting-started.html" class="nav-link active block px-4 py-2 text-sm rounded text-ember">Getting Started</a>
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Features</div>
+        <a href="commands.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Commands</a>
+        <a href="memory.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Memory</a>
+        <a href="heartbeat.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Heartbeat</a>
+        <a href="scheduler.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Scheduler</a>
+        <a href="slack.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Slack</a>
+        <a href="skills.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Skills</a>
+
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Reference</div>
+        <a href="architecture.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Architecture</a>
+        <a href="prompt.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">System Prompt</a>
+        <a href="files.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">File Reference</a>
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 lg:ml-[260px] px-6 md:px-12 lg:px-16 py-16 md:py-20 max-w-[860px]">
+
+      <!-- Page header -->
+      <div class="mb-16 fade-up">
+        <h1 class="font-heading text-4xl md:text-5xl font-light tracking-wide text-parchment mb-4">Getting Started</h1>
+        <p class="text-stone text-lg fade-up delay-1">Clone the repo, run setup, and you're in.</p>
+      </div>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 mb-12 fade-up delay-2"></div>
+
+      <!-- Prerequisites -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 text-parchment">Prerequisites</h2>
+        <p class="text-stone leading-relaxed mb-4">Superbot is built on <strong class="text-parchment font-medium">Claude Code</strong>, Anthropic's CLI for Claude. The setup script will install it for you if you don't have it already.</p>
+        <p class="text-stone leading-relaxed mb-6">You'll need an Anthropic plan that supports Claude Code. We recommend a <strong class="text-parchment font-medium">Max plan</strong> &mdash; superbot runs background workers, heartbeat tasks, and Slack alongside your main session, which uses significant capacity.</p>
+      </section>
+
+      <!-- Step 1: Clone -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">
+          <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-ember/15 text-ember text-sm font-bold mr-2">1</span>
+          Clone the Repo
+        </h2>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>git clone https://github.com/gkkirsch/superbot.git ~/superbot
+cd ~/superbot && npm install</code></pre>
+      </section>
+
+      <!-- Step 2: Run Setup -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">
+          <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-ember/15 text-ember text-sm font-bold mr-2">2</span>
+          Run Setup
+        </h2>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>bash ~/superbot/scripts/setup.sh</code></pre>
+        <p class="text-stone leading-relaxed mb-6">This scaffolds all config files, installs skills, sets up your shell, and launches straight into onboarding. The onboarding walks you through naming your bot, defining its personality, and telling it about yourself. When it's done, superbot restarts with your new config loaded and you're ready to go.</p>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- Next Steps -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 text-parchment">Next Steps</h2>
+        <ul class="text-stone space-y-2 mb-6 list-disc pl-5">
+          <li>Explore <a href="commands.html" class="text-sand hover:text-sand/70 underline-offset-4 hover:underline">all commands</a> available in superbot</li>
+          <li>Set up <a href="slack.html" class="text-sand hover:text-sand/70 underline-offset-4 hover:underline">Slack integration</a> for mobile access</li>
+          <li>Learn how the <a href="memory.html" class="text-sand hover:text-sand/70 underline-offset-4 hover:underline">memory system</a> works</li>
+          <li>Browse <a href="skills.html" class="text-sand hover:text-sand/70 underline-offset-4 hover:underline">available skills</a> to extend capabilities</li>
+          <li>Enable <a href="heartbeat.html" class="text-sand hover:text-sand/70 underline-offset-4 hover:underline">background tasks</a> with the heartbeat system</li>
+        </ul>
+      </section>
+
+      <!-- Footer -->
+      <div class="w-full h-px bg-border mb-8 mt-16"></div>
+      <footer class="text-stone/40 text-xs tracking-wide">
+        superbot
+      </footer>
+
+    </main>
+  </div>
+
+  <script>
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('hidden');
+    }
+    document.getElementById('mobile-toggle').addEventListener('click', toggleSidebar);
+
+    // Intersection Observer for scroll reveals
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => {
+            entry.target.classList.add('visible');
+          }, index * 40);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px 50px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

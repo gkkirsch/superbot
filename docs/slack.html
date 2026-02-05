@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <title>Slack Integration — Superbot Docs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0a0a0a',
+            surface: '#141414',
+            parchment: '#d4cdc4',
+            stone: '#706b63',
+            sand: '#c4a882', ember: '#DC504A',
+            moss: '#8a9a7b',
+            border: '#1f1f1e',
+            codebg: '#111110',
+          },
+          fontFamily: {
+            mono: ['"Space Mono"', 'monospace'],
+            heading: ['"Space Mono"', 'monospace'],
+            body: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: #2a2a28; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a38; }
+
+    /* Selection */
+    ::selection { background: rgba(196, 168, 130, 0.25); color: #d4cdc4; }
+
+    /* Fade-in animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .fade-up {
+      opacity: 0;
+      animation: fadeUp 0.6s ease-out forwards;
+    }
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    .delay-5 { animation-delay: 0.5s; }
+    .delay-6 { animation-delay: 0.6s; }
+    .delay-7 { animation-delay: 0.7s; }
+    .delay-8 { animation-delay: 0.8s; }
+
+    /* Sidebar active indicator */
+    .nav-link { position: relative; transition: color 0.2s ease, background 0.2s ease; }
+    .nav-link::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      height: 0;
+      background: #DC504A;
+      transition: height 0.2s ease;
+    }
+    .nav-link:hover::before, .nav-link.active::before { height: 60%; }
+    .nav-link.active { color: #DC504A; }
+
+    /* Intersection Observer reveals */
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Mobile sidebar */
+    @media (max-width: 1024px) {
+      .sidebar-panel {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      .sidebar-panel.open {
+        transform: translateX(0);
+      }
+    }
+  </style>
+</head>
+<body class="bg-ink text-parchment font-body leading-relaxed min-h-screen">
+
+  <!-- Mobile toggle -->
+  <button id="mobile-toggle" class="lg:hidden fixed top-5 left-5 z-[200] bg-surface border border-border rounded px-2.5 py-2 text-parchment/70 hover:text-parchment transition-colors">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/50 z-[90] hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar-panel w-[260px] flex-shrink-0 bg-surface border-r border-border fixed top-0 left-0 bottom-0 z-[100] overflow-y-auto lg:translate-x-0">
+      <div class="px-6 pt-8 pb-6 border-b border-border">
+        <a href="index.html" class="no-underline">
+          <img src="superbotlogo.svg" alt="superbot" class="h-6">
+          <span class="text-stone text-xs tracking-[0.15em] uppercase mt-1 block">documentation</span>
+        </a>
+      </div>
+      <nav class="px-4 py-6 space-y-1">
+        <a href="index.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Home</a>
+        <a href="getting-started.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Getting Started</a>
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Features</div>
+        <a href="commands.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Commands</a>
+        <a href="memory.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Memory</a>
+        <a href="heartbeat.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Heartbeat</a>
+        <a href="scheduler.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Scheduler</a>
+        <a href="slack.html" class="nav-link active block px-4 py-2 text-sm rounded text-ember">Slack</a>
+        <a href="skills.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Skills</a>
+
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Reference</div>
+        <a href="architecture.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Architecture</a>
+        <a href="prompt.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">System Prompt</a>
+        <a href="files.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">File Reference</a>
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 lg:ml-[260px] px-6 md:px-12 lg:px-16 py-16 md:py-20 max-w-[860px]">
+
+      <!-- Page header -->
+      <div class="mb-16 fade-up">
+        <h1 class="font-heading text-4xl md:text-5xl font-light tracking-wide text-parchment mb-4">Slack Integration</h1>
+        <p class="text-stone text-lg fade-up delay-1">Talk to superbot from Slack via DMs and @mentions.</p>
+      </div>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 mb-12 fade-up delay-2"></div>
+
+      <!-- Overview -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Overview</h2>
+        <p class="text-stone leading-relaxed mb-6">The Slack bot lets you interact with superbot from anywhere &mdash; your phone, desktop, any Slack client. It uses Socket Mode (no webhook URL required, works behind firewalls) and maintains thread-based session continuity via persistent worker sessions.</p>
+      </section>
+
+      <!-- Setting Up -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Setting Up</h2>
+        <p class="text-stone leading-relaxed mb-4">Run the setup command inside a superbot session:</p>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>/slack-setup</code></pre>
+        <p class="text-stone leading-relaxed mb-4">This walks you through the full process:</p>
+        <ol class="text-stone space-y-2 mb-6 list-decimal pl-5">
+          <li><strong class="text-parchment font-medium">Create the Slack app</strong> &mdash; copies a pre-built manifest to your clipboard and opens the Slack API page</li>
+          <li><strong class="text-parchment font-medium">Enable Socket Mode</strong> &mdash; in the app settings</li>
+          <li><strong class="text-parchment font-medium">Generate tokens</strong> &mdash; an App-Level Token (<code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">xapp-</code>) and Bot User OAuth Token (<code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">xoxb-</code>)</li>
+          <li><strong class="text-parchment font-medium">Save config</strong> &mdash; tokens stored in <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/config.json</code></li>
+          <li><strong class="text-parchment font-medium">Test connection</strong> &mdash; quick test run to verify it works</li>
+          <li><strong class="text-parchment font-medium">Install daemon</strong> &mdash; launchd keeps the bot running in the background</li>
+        </ol>
+
+        <h3 class="font-heading text-xl font-light mb-4 mt-8 text-parchment">Prerequisites</h3>
+        <ul class="text-stone space-y-2 mb-6 list-disc pl-5">
+          <li>Superbot must be set up first (run <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">setup.sh</code>)</li>
+          <li>Node.js must be available</li>
+          <li>npm dependencies installed (<code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">npm install</code> in the superbot directory)</li>
+        </ul>
+      </section>
+
+      <!-- How Messages Flow -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">How Messages Flow</h2>
+        <p class="text-stone leading-relaxed mb-4">Superbot acts as a <strong class="text-parchment font-medium">pure router</strong> for Slack messages. It never does work itself &mdash; it either replies directly to simple messages or forwards everything else to a worker.</p>
+        <pre class="bg-codebg border border-border rounded-lg p-6 font-mono text-xs text-stone whitespace-pre overflow-x-auto mb-6">User sends DM or @mention in Slack
+    |
+slack-bot.js (Socket Mode, always running)
+    |
+    +-- Route message to superbot inbox
+    |
+Superbot (router) receives inbox message
+    |
+    +-- Simple message? (greeting, test, etc.)
+    |   +-- Reply directly via slack-send.sh
+    |
+    +-- Everything else?
+        +-- spawn-worker.sh &lt;channel&gt; &lt;ts&gt; "&lt;message&gt;"
+        |   (or with --project &lt;slug&gt; for project work)
+        +-- Worker runs in background (claude -p)
+        +-- Result drops into superbot inbox
+        +-- Superbot posts result to Slack via slack-send.sh</pre>
+      </section>
+
+      <!-- Message Types -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Message Types</h2>
+
+        <h3 class="font-heading text-xl font-light mb-4 mt-8 text-parchment">DMs</h3>
+        <p class="text-stone leading-relaxed mb-6">Send a direct message to the Superbot app in Slack. Every DM is responded to. Sessions are keyed per-channel-per-user, so you maintain continuity across messages.</p>
+
+        <h3 class="font-heading text-xl font-light mb-4 mt-8 text-parchment">Channel @mentions</h3>
+        <p class="text-stone leading-relaxed mb-6">Mention <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">@Superbot</code> in any channel. The bot replies in a thread. All subsequent messages in that thread are handled by the same Claude session.</p>
+
+        <h3 class="font-heading text-xl font-light mb-4 mt-8 text-parchment">Thread replies</h3>
+        <p class="text-stone leading-relaxed mb-6">If superbot started a thread (via an @mention), it continues responding to replies in that thread &mdash; no need to @mention again.</p>
+      </section>
+
+      <!-- Session Continuity -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Session Continuity</h2>
+        <p class="text-stone leading-relaxed mb-4">Worker sessions are tracked in <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/sessions.json</code>. Each session is mapped to a Slack thread (channel + timestamp). When a thread reply arrives, <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">spawn-worker.sh</code> finds the existing session and resumes it with <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">claude -p --resume &lt;session-id&gt;</code> instead of starting fresh.</p>
+        <p class="text-stone leading-relaxed mb-6">The sessions registry records each worker's name, type (slack or project), Slack thread mapping, project association, status, and timestamps.</p>
+      </section>
+
+      <!-- Inbox Routing -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Inbox Routing</h2>
+        <p class="text-stone leading-relaxed mb-4">All messages flow through superbot's inbox at <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.claude/teams/superbot/inboxes/superbot.json</code>:</p>
+        <ul class="text-stone space-y-2 mb-6 list-disc pl-5">
+          <li><strong class="text-parchment font-medium">Incoming Slack messages</strong> &mdash; the Slack bot writes to the inbox when a DM or @mention arrives</li>
+          <li><strong class="text-parchment font-medium">Worker results</strong> &mdash; when a worker finishes, <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">spawn-worker.sh</code> drops the result into the inbox with the channel and thread info</li>
+        </ul>
+        <p class="text-stone leading-relaxed mb-6">Superbot reads worker results from its inbox and posts them to Slack. Workers never post to Slack directly.</p>
+      </section>
+
+      <!-- Display Name Resolution -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Display Name Resolution</h2>
+        <p class="text-stone leading-relaxed mb-6">The bot resolves Slack user IDs to display names using the Slack API, with results cached in memory. Messages in the inbox show the user's actual name, not their Slack ID.</p>
+      </section>
+
+      <!-- Message Formatting -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Message Formatting</h2>
+        <p class="text-stone leading-relaxed mb-4">Claude's markdown output is automatically converted to Slack's mrkdwn format:</p>
+        <div class="overflow-x-auto mb-4">
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="border-b border-border">
+                <th class="text-left py-3 px-4 text-parchment/80 font-medium text-xs uppercase tracking-wider">Markdown</th>
+                <th class="text-left py-3 px-4 text-parchment/80 font-medium text-xs uppercase tracking-wider">Slack mrkdwn</th>
+              </tr>
+            </thead>
+            <tbody class="text-stone">
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">**bold**</code></td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">*bold*</code></td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~~strike~~</code></td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~strike~</code></td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">[text](url)</code></td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">&lt;url|text&gt;</code></td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm"># Header</code></td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">*Header*</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-stone leading-relaxed mb-6">Long messages (&gt;3900 characters) are automatically split at paragraph or code block boundaries.</p>
+      </section>
+
+      <!-- Worker Sessions -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Worker Sessions</h2>
+        <p class="text-stone leading-relaxed mb-4">Each Slack conversation gets its own persistent worker session. Workers are spawned via the unified <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">spawn-worker.sh</code> script:</p>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code># Standard Slack worker
+spawn-worker.sh &lt;channel&gt; &lt;message_ts&gt; "&lt;message&gt;"
+
+# Project-specific worker
+spawn-worker.sh &lt;channel&gt; &lt;message_ts&gt; "&lt;message&gt;" --project &lt;slug&gt;</code></pre>
+        <p class="text-stone leading-relaxed mb-6">Workers run in the background and don't block the main session. When done, they drop their result into superbot's inbox for posting to Slack.</p>
+      </section>
+
+      <!-- Managing the Daemon -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Managing the Daemon</h2>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code># View logs
+tail -f ~/.superbot/logs/slack-stdout.log
+
+# Restart
+launchctl unload ~/Library/LaunchAgents/com.claude.superbot-slack.plist
+launchctl load ~/Library/LaunchAgents/com.claude.superbot-slack.plist
+
+# Stop
+~/superbot/scripts/uninstall-slack.sh</code></pre>
+      </section>
+
+      <!-- Config File -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Config File</h2>
+        <p class="text-stone leading-relaxed mb-4">Slack tokens are stored in <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/config.json</code>:</p>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>{
+  "slack": {
+    "botToken": "xoxb-...",
+    "appToken": "xapp-..."
+  }
+}</code></pre>
+        <p class="text-stone leading-relaxed mb-6">This file also contains <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">defaultModel</code>, heartbeat, scheduler, and other settings.</p>
+      </section>
+
+      <!-- Logs -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Logs</h2>
+        <div class="overflow-x-auto mb-6">
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="border-b border-border">
+                <th class="text-left py-3 px-4 text-parchment/80 font-medium text-xs uppercase tracking-wider">Log</th>
+                <th class="text-left py-3 px-4 text-parchment/80 font-medium text-xs uppercase tracking-wider">Contents</th>
+              </tr>
+            </thead>
+            <tbody class="text-stone">
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/logs/slack-bot.log</code></td>
+                <td class="py-3 px-4">Application-level logs (messages, sessions, errors)</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/logs/slack-stdout.log</code></td>
+                <td class="py-3 px-4">Launchd stdout</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/logs/slack-stderr.log</code></td>
+                <td class="py-3 px-4">Launchd stderr</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <div class="w-full h-px bg-border mb-8 mt-16"></div>
+      <footer class="text-stone/40 text-xs tracking-wide">
+        superbot
+      </footer>
+
+    </main>
+  </div>
+
+  <script>
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('hidden');
+    }
+    document.getElementById('mobile-toggle').addEventListener('click', toggleSidebar);
+
+    // Intersection Observer for scroll reveals
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => {
+            entry.target.classList.add('visible');
+          }, index * 40);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px 50px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

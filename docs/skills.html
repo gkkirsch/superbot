@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <title>Skills — Superbot Docs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0a0a0a',
+            surface: '#141414',
+            parchment: '#d4cdc4',
+            stone: '#706b63',
+            sand: '#c4a882', ember: '#DC504A',
+            moss: '#8a9a7b',
+            border: '#1f1f1e',
+            codebg: '#111110',
+          },
+          fontFamily: {
+            mono: ['"Space Mono"', 'monospace'],
+            heading: ['"Space Mono"', 'monospace'],
+            body: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: #2a2a28; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a38; }
+
+    /* Selection */
+    ::selection { background: rgba(196, 168, 130, 0.25); color: #d4cdc4; }
+
+    /* Fade-in animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .fade-up {
+      opacity: 0;
+      animation: fadeUp 0.6s ease-out forwards;
+    }
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    .delay-5 { animation-delay: 0.5s; }
+    .delay-6 { animation-delay: 0.6s; }
+    .delay-7 { animation-delay: 0.7s; }
+    .delay-8 { animation-delay: 0.8s; }
+
+    /* Sidebar active indicator */
+    .nav-link { position: relative; transition: color 0.2s ease, background 0.2s ease; }
+    .nav-link::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      height: 0;
+      background: #DC504A;
+      transition: height 0.2s ease;
+    }
+    .nav-link:hover::before, .nav-link.active::before { height: 60%; }
+    .nav-link.active { color: #DC504A; }
+
+    /* Intersection Observer reveals */
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Mobile sidebar */
+    @media (max-width: 1024px) {
+      .sidebar-panel {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      .sidebar-panel.open {
+        transform: translateX(0);
+      }
+    }
+  </style>
+</head>
+<body class="bg-ink text-parchment font-body leading-relaxed min-h-screen">
+
+  <!-- Mobile toggle -->
+  <button id="mobile-toggle" class="lg:hidden fixed top-5 left-5 z-[200] bg-surface border border-border rounded px-2.5 py-2 text-parchment/70 hover:text-parchment transition-colors">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/50 z-[90] hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar-panel w-[260px] flex-shrink-0 bg-surface border-r border-border fixed top-0 left-0 bottom-0 z-[100] overflow-y-auto lg:translate-x-0">
+      <div class="px-6 pt-8 pb-6 border-b border-border">
+        <a href="index.html" class="no-underline">
+          <img src="superbotlogo.svg" alt="superbot" class="h-6">
+          <span class="text-stone text-xs tracking-[0.15em] uppercase mt-1 block">documentation</span>
+        </a>
+      </div>
+      <nav class="px-4 py-6 space-y-1">
+        <a href="index.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Home</a>
+        <a href="getting-started.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Getting Started</a>
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Features</div>
+        <a href="commands.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Commands</a>
+        <a href="memory.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Memory</a>
+        <a href="heartbeat.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Heartbeat</a>
+        <a href="scheduler.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Scheduler</a>
+        <a href="slack.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Slack</a>
+        <a href="skills.html" class="nav-link active block px-4 py-2 text-sm rounded text-ember">Skills</a>
+
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Reference</div>
+        <a href="architecture.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Architecture</a>
+        <a href="prompt.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">System Prompt</a>
+        <a href="files.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">File Reference</a>
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 lg:ml-[260px] px-6 md:px-12 lg:px-16 py-16 md:py-20 max-w-[860px]">
+
+      <!-- Page header -->
+      <div class="mb-16 fade-up">
+        <h1 class="font-heading text-4xl md:text-5xl font-light tracking-wide text-parchment mb-4">Skills</h1>
+        <p class="text-stone text-lg fade-up delay-1">Extend superbot's capabilities with installable skills.</p>
+      </div>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 mb-12 fade-up delay-2"></div>
+
+      <!-- What Are Skills? -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">What Are Skills?</h2>
+        <p class="text-stone leading-relaxed mb-6">Skills are packaged capabilities that teach Claude how to do specific things &mdash; interact with Google Workspace, deploy to Cloudflare, manage Slack, and more. Each skill is a directory with a <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">SKILL.md</code> file that contains instructions and reference documentation.</p>
+      </section>
+
+      <!-- Built-in Skills -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Built-in Skills</h2>
+        <p class="text-stone leading-relaxed mb-6">Superbot ships with 3 built-in skills in the <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">skills/</code> directory:</p>
+        <div class="overflow-x-auto mb-6">
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="border-b border-border">
+                <th class="text-left py-3 px-4 text-parchment/80 font-medium text-xs tracking-wider uppercase">Skill</th>
+                <th class="text-left py-3 px-4 text-parchment/80 font-medium text-xs tracking-wider uppercase">Description</th>
+              </tr>
+            </thead>
+            <tbody class="text-stone">
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">superbot</code></td>
+                <td class="py-3 px-4">Context manager &mdash; memory, identity, user profile. Commands: remember, forget, identity, user, status.</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">slack</code></td>
+                <td class="py-3 px-4">Slack messaging &mdash; formatting, best practices, and how the bot works. Teaches superbot to write good Slack messages.</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">gog</code></td>
+                <td class="py-3 px-4">Google Workspace CLI &mdash; Gmail, Calendar, Drive, Contacts, Sheets, Docs. Requires OAuth setup.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Managing Skills -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Managing Skills</h2>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>/superbot:skills list                # Show available and installed skills
+/superbot:skills install gog         # Install a built-in skill
+/superbot:skills install slack       # Install from the registry
+/superbot:skills remove gog          # Remove an installed skill
+/superbot:skills search calendar     # Search the registry</code></pre>
+
+        <h3 class="font-heading text-xl font-light mb-4 mt-8 text-parchment">Installing a built-in skill</h3>
+        <p class="text-stone leading-relaxed mb-4">Built-in skills are copied from <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">skills/&lt;name&gt;/</code> in the superbot repo to <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.claude/skills/&lt;name&gt;/</code>:</p>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>cp -r ~/superbot/skills/gog ~/.claude/skills/gog</code></pre>
+        <p class="text-stone leading-relaxed mb-6">Some skills have prerequisites. The <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">gog</code> skill, for example, requires a separate OAuth setup for Google Workspace access.</p>
+
+        <h3 class="font-heading text-xl font-light mb-4 mt-8 text-parchment">Installing from the registry</h3>
+        <p class="text-stone leading-relaxed mb-4">Skills not in the built-in catalog are fetched from the <a href="https://skills.sh" class="text-sand hover:text-sand/70 underline-offset-4 hover:underline">skills.sh</a> registry:</p>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>npx skills add anthropics/skills@slack-gif-creator -g -a claude-code -y</code></pre>
+        <p class="text-stone leading-relaxed mb-6">The format is <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">owner/repo@skill-name</code>.</p>
+      </section>
+
+      <!-- Searching the Registry -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Searching the Registry</h2>
+        <p class="text-stone leading-relaxed mb-4">The skills registry API lets you discover skills:</p>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>GET https://skills.sh/api/search?q=&lt;query&gt;&amp;limit=50</code></pre>
+        <p class="text-stone leading-relaxed mb-4">Example response:</p>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>{
+  "query": "slack",
+  "searchType": "fuzzy",
+  "skills": [
+    {
+      "id": "anthropics/skills/slack-gif-creator",
+      "skillId": "slack-gif-creator",
+      "name": "slack-gif-creator",
+      "installs": 3133,
+      "source": "anthropics/skills"
+    }
+  ],
+  "count": 3
+}</code></pre>
+        <p class="text-stone leading-relaxed mb-4">The <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">id</code> field maps to the install command: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">anthropics/skills/slack-gif-creator</code> becomes <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">anthropics/skills@slack-gif-creator</code>.</p>
+        <p class="text-stone leading-relaxed mb-6">Prefer skills with higher install counts and from reputable sources (<code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">anthropics/</code>, <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">cloudflare/</code>, <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">vercel-labs/</code>, <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">firecrawl/</code>).</p>
+      </section>
+
+      <!-- Curated Skills -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Curated Skills</h2>
+        <p class="text-stone leading-relaxed mb-6">These are suggested during onboarding based on your profile:</p>
+        <div class="overflow-x-auto mb-6">
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="border-b border-border">
+                <th class="text-left py-3 px-4 text-parchment/80 font-medium text-xs tracking-wider uppercase">Skill</th>
+                <th class="text-left py-3 px-4 text-parchment/80 font-medium text-xs tracking-wider uppercase">Source</th>
+                <th class="text-left py-3 px-4 text-parchment/80 font-medium text-xs tracking-wider uppercase">Description</th>
+              </tr>
+            </thead>
+            <tbody class="text-stone">
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Slack GIF creator</td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">anthropics/skills@slack-gif-creator</code></td>
+                <td class="py-3 px-4">Send messages, read channels, GIF reactions</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Gmail</td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">letta-ai/skills@gmail-integration</code></td>
+                <td class="py-3 px-4">Read, search, draft emails</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Notion</td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">davila7/claude-code-templates@notion-knowledge-capture</code></td>
+                <td class="py-3 px-4">Knowledge base, project docs, meeting notes</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Frontend design</td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">anthropics/skills@frontend-design</code></td>
+                <td class="py-3 px-4">Best practices for building UIs</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Web design</td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">vercel-labs/agent-skills@web-design-guidelines</code></td>
+                <td class="py-3 px-4">Layout, typography, responsive patterns</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Cloudflare</td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">cloudflare/skills@cloudflare</code></td>
+                <td class="py-3 px-4">Deploy sites, workers, manage DNS</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Firecrawl</td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">firecrawl/cli@firecrawl</code></td>
+                <td class="py-3 px-4">Scrape and crawl any website</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Browser automation</td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">vercel-labs/agent-browser@agent-browser</code></td>
+                <td class="py-3 px-4">Control a browser for testing and scraping</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">GitHub Actions</td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">wshobson/agents@github-actions-templates</code></td>
+                <td class="py-3 px-4">CI/CD workflow templates</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Website audit</td>
+                <td class="py-3 px-4"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">squirrelscan/skills@audit-website</code></td>
+                <td class="py-3 px-4">Performance, SEO, accessibility checks</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Skill File Structure -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Skill File Structure</h2>
+        <p class="text-stone leading-relaxed mb-4">Each skill is a directory with at minimum a <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">SKILL.md</code> file:</p>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>skills/
++-- superbot/
+|   +-- SKILL.md
++-- slack/
+|   +-- SKILL.md
++-- gog/
+    +-- SKILL.md</code></pre>
+        <p class="text-stone leading-relaxed mb-6">The <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">SKILL.md</code> contains the skill's instructions, commands, and reference documentation that Claude reads when the skill is invoked.</p>
+      </section>
+
+      <!-- Footer -->
+      <div class="w-full h-px bg-border mb-8 mt-16"></div>
+      <footer class="text-stone/40 text-xs tracking-wide">
+        superbot
+      </footer>
+
+    </main>
+  </div>
+
+  <script>
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('hidden');
+    }
+    document.getElementById('mobile-toggle').addEventListener('click', toggleSidebar);
+
+    // Intersection Observer for scroll reveals
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => {
+            entry.target.classList.add('visible');
+          }, index * 40);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px 50px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

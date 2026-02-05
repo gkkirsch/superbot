@@ -1,0 +1,10 @@
+{
+  "name": "superbot",
+  "version": "1.0.0",
+  "description": "Superbot - heartbeat tasks, persistent memory, and identity across sessions",
+  "author": {
+    "name": "Garrett Kirschbaum"
+  },
+  "homepage": "https://github.com/gkkirsch/claude-superbot",
+  "keywords": ["heartbeat", "memory", "superbot", "background-tasks"]
+}

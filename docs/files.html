@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <title>File Reference — Superbot Docs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0a0a0a',
+            surface: '#141414',
+            parchment: '#d4cdc4',
+            stone: '#706b63',
+            sand: '#c4a882', ember: '#DC504A',
+            moss: '#8a9a7b',
+            border: '#1f1f1e',
+            codebg: '#111110',
+          },
+          fontFamily: {
+            mono: ['"Space Mono"', 'monospace'],
+            heading: ['"Space Mono"', 'monospace'],
+            body: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: #2a2a28; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a38; }
+
+    /* Selection */
+    ::selection { background: rgba(196, 168, 130, 0.25); color: #d4cdc4; }
+
+    /* Fade-in animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .fade-up {
+      opacity: 0;
+      animation: fadeUp 0.6s ease-out forwards;
+    }
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    .delay-5 { animation-delay: 0.5s; }
+    .delay-6 { animation-delay: 0.6s; }
+    .delay-7 { animation-delay: 0.7s; }
+    .delay-8 { animation-delay: 0.8s; }
+
+    /* Sidebar active indicator */
+    .nav-link { position: relative; transition: color 0.2s ease, background 0.2s ease; }
+    .nav-link::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      height: 0;
+      background: #DC504A;
+      transition: height 0.2s ease;
+    }
+    .nav-link:hover::before, .nav-link.active::before { height: 60%; }
+    .nav-link.active { color: #DC504A; }
+
+    /* Intersection Observer reveals */
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Mobile sidebar */
+    @media (max-width: 1024px) {
+      .sidebar-panel {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      .sidebar-panel.open {
+        transform: translateX(0);
+      }
+    }
+  </style>
+</head>
+<body class="bg-ink text-parchment font-body leading-relaxed min-h-screen">
+
+  <!-- Mobile toggle -->
+  <button id="mobile-toggle" class="lg:hidden fixed top-5 left-5 z-[200] bg-surface border border-border rounded px-2.5 py-2 text-parchment/70 hover:text-parchment transition-colors">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/50 z-[90] hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar-panel w-[260px] flex-shrink-0 bg-surface border-r border-border fixed top-0 left-0 bottom-0 z-[100] overflow-y-auto lg:translate-x-0">
+      <div class="px-6 pt-8 pb-6 border-b border-border">
+        <a href="index.html" class="no-underline">
+          <img src="superbotlogo.svg" alt="superbot" class="h-6">
+          <span class="text-stone text-xs tracking-[0.15em] uppercase mt-1 block">documentation</span>
+        </a>
+      </div>
+      <nav class="px-4 py-6 space-y-1">
+        <a href="index.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Home</a>
+        <a href="getting-started.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Getting Started</a>
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Features</div>
+        <a href="commands.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Commands</a>
+        <a href="memory.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Memory</a>
+        <a href="heartbeat.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Heartbeat</a>
+        <a href="scheduler.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Scheduler</a>
+        <a href="slack.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Slack</a>
+        <a href="skills.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Skills</a>
+
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Reference</div>
+        <a href="architecture.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Architecture</a>
+        <a href="prompt.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">System Prompt</a>
+        <a href="files.html" class="nav-link active block px-4 py-2 text-sm rounded text-ember">File Reference</a>
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 lg:ml-[260px] px-6 md:px-12 lg:px-16 py-16 md:py-20 max-w-[860px]">
+
+      <!-- Page header -->
+      <div class="mb-16 fade-up">
+        <h1 class="font-heading text-4xl md:text-5xl font-light tracking-wide text-parchment mb-4">File Reference</h1>
+        <p class="text-stone text-lg fade-up delay-1">Every config file, what it does, and where it lives.</p>
+      </div>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 mb-12 fade-up delay-2"></div>
+
+      <!-- User Config Files -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">User Config Files</h2>
+        <p class="text-stone leading-relaxed mb-6">Location: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/</code></p>
+        <div class="overflow-x-auto mb-8">
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">File</th>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Purpose</th>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Updated By</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">config.json</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Settings &mdash; models, Slack tokens, schedule, heartbeat config. Created from <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">config.template.json</code>.</td>
+                <td class="px-4 py-3 border-b border-border text-stone">Setup, user</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">IDENTITY.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Bot personality &mdash; name, communication style, proactivity level, guiding principles</td>
+                <td class="px-4 py-3 border-b border-border text-stone">User, onboarding</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">USER.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">User profile &mdash; name, about, common tasks, interests</td>
+                <td class="px-4 py-3 border-b border-border text-stone">User, onboarding</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">MEMORY.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Persistent memories and learnings. Curated long-term knowledge base.</td>
+                <td class="px-4 py-3 border-b border-border text-stone">User, Claude, heartbeat worker</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">HEARTBEAT.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Task queue. Pending (<code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">- [ ]</code>) and completed (<code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">- [x]</code>) tasks with notes.</td>
+                <td class="px-4 py-3 border-b border-border text-stone">User, heartbeat worker</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">daily/YYYY-MM-DD.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Daily notes &mdash; auto-populated history of each day's work.</td>
+                <td class="px-4 py-3 border-b border-border text-stone">Session observer, heartbeat worker, manual</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">sessions.json</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Worker session registry &mdash; tracks all spawned workers, their Slack thread mappings, project associations, and status.</td>
+                <td class="px-4 py-3 border-b border-border text-stone">spawn-worker.sh</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">prompts/heartbeat.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Heartbeat worker instructions. Customizable copy of <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">scripts/worker-prompt.md</code>.</td>
+                <td class="px-4 py-3 border-b border-border text-stone">Setup, user</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b-0 text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">.observer-offset</code></td>
+                <td class="px-4 py-3 border-b-0 text-stone">Tracks observer progress &mdash; session ID and line offset for incremental parsing.</td>
+                <td class="px-4 py-3 border-b-0 text-stone">Session observer (daily-observer.sh)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- Slack Files -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 text-parchment">Slack Files</h2>
+        <p class="text-stone leading-relaxed mb-6">Location: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/</code></p>
+        <div class="overflow-x-auto mb-8">
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">File</th>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">slack-config.json</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Legacy Slack bot tokens. Migrated to <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">config.json</code> on setup.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">logs/slack-bot.log</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Application-level Slack bot logs (messages, sessions, errors).</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">logs/slack-stdout.log</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Launchd stdout for the Slack daemon.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b-0 text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">logs/slack-stderr.log</code></td>
+                <td class="px-4 py-3 border-b-0 text-stone">Launchd stderr for the Slack daemon.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- Scheduler Files -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 text-parchment">Scheduler Files</h2>
+        <p class="text-stone leading-relaxed mb-6">Location: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/</code></p>
+        <div class="overflow-x-auto mb-8">
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">File</th>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">schedule-last-run.json</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Dedup tracking. Maps job names to their last execution key.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">logs/scheduler.log</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Scheduler activity: running, completed, failed jobs.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">logs/scheduler-stdout.log</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Launchd stdout for the scheduler daemon.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b-0 text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">logs/scheduler-stderr.log</code></td>
+                <td class="px-4 py-3 border-b-0 text-stone">Launchd stderr for the scheduler daemon.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- Heartbeat Logs -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 text-parchment">Heartbeat Logs</h2>
+        <p class="text-stone leading-relaxed mb-6">Location: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/</code></p>
+        <div class="overflow-x-auto mb-8">
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">File</th>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">logs/heartbeat.log</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Triage decisions, worker spawning, completion events.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">logs/heartbeat-stdout.log</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Launchd stdout for the heartbeat cron.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b-0 text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">logs/heartbeat-stderr.log</code></td>
+                <td class="px-4 py-3 border-b-0 text-stone">Launchd stderr for the heartbeat cron.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- Team Files -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 text-parchment">Team Files</h2>
+        <p class="text-stone leading-relaxed mb-6">Location: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.claude/teams/superbot/</code></p>
+        <div class="overflow-x-auto mb-8">
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">File</th>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">config.json</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Team configuration &mdash; name, description, lead agent/session IDs, member list.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">inboxes/superbot.json</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Team lead inbox. Receives messages from heartbeat worker and Slack bot.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b-0 text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">inboxes/heartbeat.json</code></td>
+                <td class="px-4 py-3 border-b-0 text-stone">Heartbeat worker inbox. Receives kickoff messages from cron script.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- Repository Template Files -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 text-parchment">Repository Template Files</h2>
+        <p class="text-stone leading-relaxed mb-6">Location: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/superbot/templates/</code></p>
+        <div class="overflow-x-auto mb-8">
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">File</th>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">SYSTEM.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Core system instructions &mdash; behaviors, file purposes, commands, guidelines.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">IDENTITY.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Template for bot persona. Copied to user config on setup.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">USER.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Template for user profile. Copied to user config on setup.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">MEMORY.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Template for persistent memory. Copied to user config on setup.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">HEARTBEAT.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Template for task queue. Copied to user config on setup.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">ONBOARD.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Onboarding conversation script. Deleted after onboarding completes.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b-0 text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">CLAUDE_SYSTEM_PROMPT.md</code></td>
+                <td class="px-4 py-3 border-b-0 text-stone">Base Claude behavior instructions included in system prompt.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- Plugin & Config Files -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 text-parchment">Plugin &amp; Config Files</h2>
+        <p class="text-stone leading-relaxed mb-6">Location: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/superbot/</code></p>
+        <div class="overflow-x-auto mb-8">
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">File</th>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">.claude-plugin/plugin.json</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Plugin metadata &mdash; name, version, description, author, keywords.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">hooks/hooks.json</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Session event hooks. Currently empty, reserved for future use.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">package.json</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Node.js dependencies. Currently just <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">@slack/bolt</code>.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b-0 text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">scripts/slack-manifest.json</code></td>
+                <td class="px-4 py-3 border-b-0 text-stone">Slack app manifest for creating the bot via the Slack API.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- Launchd Plists -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 text-parchment">Launchd Plists</h2>
+        <p class="text-stone leading-relaxed mb-6">Location: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/Library/LaunchAgents/</code></p>
+        <div class="overflow-x-auto mb-8">
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Plist</th>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Service</th>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Interval</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">com.claude.superbot-heartbeat.plist</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Heartbeat cron &mdash; runs <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">heartbeat-cron.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Every 1800s (30 min)</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">com.claude.superbot-scheduler.plist</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Scheduler &mdash; runs <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">scheduler.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Every 60s</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b-0 text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">com.claude.superbot-slack.plist</code></td>
+                <td class="px-4 py-3 border-b-0 text-stone">Slack bot &mdash; runs <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">slack-bot.js</code></td>
+                <td class="px-4 py-3 border-b-0 text-stone">KeepAlive (continuous)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- Scripts Reference -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 text-parchment">Scripts Reference</h2>
+        <p class="text-stone leading-relaxed mb-6">Location: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/superbot/scripts/</code></p>
+        <div class="overflow-x-auto mb-8">
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Script</th>
+                <th class="text-[10px] uppercase tracking-wider text-stone/60 font-medium border-b-2 border-border px-4 py-3 text-left">Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">setup.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Full initialization &mdash; create directories, copy templates, set up team, shell profile</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">heartbeat-cron.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Background worker spawner &mdash; triage, context assembly, spawn teammate</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">triage.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Lightweight work detector &mdash; Haiku model answers YES/NO</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">triage-prompt.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Instructions for the triage agent</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">spawn-worker.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Unified worker spawner &mdash; creates/resumes persistent sessions for Slack and project workers</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">slack-worker-prompt.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">System prompt for Slack workers spawned by spawn-worker.sh</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">project-worker-prompt.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">System prompt for project workers (used with --project flag)</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">worker-prompt.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Instructions for the heartbeat worker teammate</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">daily-observer.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Session observer &mdash; parses active session, appends key events to daily notes</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">parse-session.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">JSONL parser &mdash; extracts conversational content from session files</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">observer-prompt.md</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Instructions for the Haiku observer model</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">scheduler.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Cron-style job executor &mdash; reads schedule array from config.json, spawns Claude for due jobs</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">slack-bot.js</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Full Slack bot &mdash; Socket Mode, DMs, @mentions, thread continuity</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">slack-manifest.json</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Slack app configuration manifest</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">inject-context.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Context injection helper for other scripts</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">install-launchd.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Install heartbeat launchd job</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">install-scheduler.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Install scheduler launchd job</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">install-slack.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Install Slack daemon launchd job</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">uninstall-launchd.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Remove heartbeat scheduler</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">uninstall-slack.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Remove Slack daemon</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">status.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Quick status check from the command line</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">doctor.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Comprehensive diagnostics and health check</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b border-border text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">test-triage.sh</code></td>
+                <td class="px-4 py-3 border-b border-border text-stone">Test triage decision without spawning worker</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 border-b-0 text-stone"><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-xs">test-worker.sh</code></td>
+                <td class="px-4 py-3 border-b-0 text-stone">Dry-run worker with read-only tools</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <div class="w-full h-px bg-border mb-8 mt-16"></div>
+      <footer class="text-stone/40 text-xs tracking-wide">
+        superbot
+      </footer>
+
+    </main>
+  </div>
+
+  <script>
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('hidden');
+    }
+    document.getElementById('mobile-toggle').addEventListener('click', toggleSidebar);
+
+    // Intersection Observer for scroll reveals
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => {
+            entry.target.classList.add('visible');
+          }, index * 40);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px 50px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

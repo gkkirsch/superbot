@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <title>Memory — Superbot Docs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { ink: '#0a0a0a', surface: '#141414', parchment: '#d4cdc4', stone: '#706b63', sand: '#c4a882', ember: '#DC504A', moss: '#8a9a7b', border: '#1f1f1e', codebg: '#111110' },
+        fontFamily: {
+          mono: ['"Space Mono"', 'monospace'],
+          heading: ['"Space Mono"', 'monospace'],
+          body: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        },
+      }}
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: #2a2a28; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a38; }
+
+    /* Selection */
+    ::selection { background: rgba(196, 168, 130, 0.25); color: #d4cdc4; }
+
+    /* Fade-in animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .fade-up {
+      opacity: 0;
+      animation: fadeUp 0.6s ease-out forwards;
+    }
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    .delay-5 { animation-delay: 0.5s; }
+    .delay-6 { animation-delay: 0.6s; }
+    .delay-7 { animation-delay: 0.7s; }
+    .delay-8 { animation-delay: 0.8s; }
+
+    /* Sidebar active indicator */
+    .nav-link { position: relative; transition: color 0.2s ease, background 0.2s ease; }
+    .nav-link::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      height: 0;
+      background: #DC504A;
+      transition: height 0.2s ease;
+    }
+    .nav-link:hover::before, .nav-link.active::before { height: 60%; }
+    .nav-link.active { color: #DC504A; }
+
+    /* Intersection Observer reveals */
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Mobile sidebar */
+    @media (max-width: 1024px) {
+      .sidebar-panel {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      .sidebar-panel.open {
+        transform: translateX(0);
+      }
+    }
+  </style>
+</head>
+<body class="bg-ink text-parchment font-body leading-relaxed min-h-screen">
+
+  <!-- Mobile toggle -->
+  <button id="mobile-toggle" class="lg:hidden fixed top-5 left-5 z-[200] bg-surface border border-border rounded px-2.5 py-2 text-parchment/70 hover:text-parchment transition-colors">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/50 z-[90] hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar-panel w-[260px] flex-shrink-0 bg-surface border-r border-border fixed top-0 left-0 bottom-0 z-[100] overflow-y-auto lg:translate-x-0">
+      <div class="px-6 pt-8 pb-6 border-b border-border">
+        <a href="index.html" class="no-underline">
+          <img src="superbotlogo.svg" alt="superbot" class="h-6">
+          <span class="text-stone text-xs tracking-[0.15em] uppercase mt-1 block">documentation</span>
+        </a>
+      </div>
+      <nav class="px-4 py-6 space-y-1">
+        <a href="index.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Home</a>
+        <a href="getting-started.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Getting Started</a>
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Features</div>
+        <a href="commands.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Commands</a>
+        <a href="memory.html" class="nav-link active block px-4 py-2 text-sm rounded text-ember">Memory</a>
+        <a href="heartbeat.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Heartbeat</a>
+        <a href="scheduler.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Scheduler</a>
+        <a href="slack.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Slack</a>
+        <a href="skills.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Skills</a>
+
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Reference</div>
+        <a href="architecture.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Architecture</a>
+        <a href="prompt.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">System Prompt</a>
+        <a href="files.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">File Reference</a>
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 lg:ml-[260px] px-6 md:px-12 lg:px-16 py-16 md:py-20 max-w-[860px]">
+
+      <!-- Header -->
+      <div class="mb-12 fade-up">
+        <h1 class="font-heading text-4xl md:text-5xl font-light tracking-wide text-parchment mb-4">Memory System</h1>
+        <p class="text-stone text-lg mb-12 fade-up delay-1">How superbot remembers across sessions.</p>
+      </div>
+
+      <!-- The Problem -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16">Why Superbot Memory</h2>
+        <p class="text-stone leading-relaxed mb-4">Claude Code has basic memory &mdash; it can remember things across sessions in a simple notes file. But it's flat, unstructured, and doesn't distinguish between a fleeting thought and a lasting preference. There's no separation between today's scratch notes and long-term knowledge, no session history, and no background workers updating what you know.</p>
+        <p class="text-stone leading-relaxed mb-4">Superbot replaces that with a layered memory system: curated long-term memory and auto-populated daily notes &mdash; all loaded into context automatically at startup.</p>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- The Solution -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16">The Solution: Write It Down</h2>
+        <p class="text-stone leading-relaxed mb-4">Superbot's memory system is built on a simple principle: <strong class="text-parchment font-medium">if you want to remember something, write it to a file</strong>. Files survive session restarts. The context window doesn't.</p>
+        <p class="text-stone leading-relaxed mb-4">There are no "mental notes." No internal state that persists. Everything that matters gets written to disk and re-read at the start of every session.</p>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- Memory Layers -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16">Memory Layers</h2>
+
+        <!-- MEMORY.md -->
+        <h3 class="font-heading text-xl font-light mb-4 mt-8 text-parchment">MEMORY.md &mdash; Long-Term Memory</h3>
+        <p class="text-stone leading-relaxed mb-4">Location: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/MEMORY.md</code></p>
+        <p class="text-stone leading-relaxed mb-4">This is superbot's curated, long-term memory. Think of it like a personal knowledge base &mdash; the distilled essence, not raw logs.</p>
+        <ul class="text-stone space-y-2 mb-6 list-disc pl-5">
+          <li>Read, edited, and updated freely during sessions</li>
+          <li>Stores significant events, decisions, opinions, lessons learned</li>
+          <li>Pruned over time &mdash; outdated memories get removed</li>
+          <li>Updated by the heartbeat worker when it learns something worth keeping</li>
+        </ul>
+
+        <h4 class="text-sm font-medium uppercase tracking-wider text-stone/60 mb-3 mt-6">Format</h4>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>## Preferences
+- Prefers TypeScript over JavaScript
+- Uses Vim keybindings
+
+## Project Context
+- Auth system uses JWT with refresh tokens
+- Deployment is via Vercel</code></pre>
+
+        <!-- Daily Notes -->
+        <h3 class="font-heading text-xl font-light mb-4 mt-8 text-parchment">Daily Notes &mdash; Auto-Populated History</h3>
+        <p class="text-stone leading-relaxed mb-4">Location: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/daily/YYYY-MM-DD.md</code></p>
+        <p class="text-stone leading-relaxed mb-4">The primary record of what happened each day. Auto-populated by three sources:</p>
+        <ul class="text-stone space-y-2 mb-6 list-disc pl-5">
+          <li><strong class="text-parchment font-medium">Session observer</strong> &mdash; every 30 min, parses the active Claude Code session for key events (decisions, accomplishments, problems, mistakes)</li>
+          <li><strong class="text-parchment font-medium">Heartbeat worker</strong> &mdash; logs completed background tasks with a <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">[heartbeat]</code> prefix</li>
+          <li><strong class="text-parchment font-medium">Manual</strong> &mdash; you or the user adding notes directly</li>
+        </ul>
+        <p class="text-stone leading-relaxed mb-4">Notes are permanent history. At end of day, review and promote important learnings to MEMORY.md.</p>
+
+        <!-- Session Observer -->
+        <h3 class="font-heading text-xl font-light mb-4 mt-8 text-parchment">Session Observer</h3>
+        <p class="text-stone leading-relaxed mb-4">The observer is a lightweight background process that runs every 30 minutes (via the heartbeat cron). It:</p>
+        <ol class="text-stone space-y-2 mb-6 list-decimal pl-5">
+          <li>Finds the most recently modified JSONL session file across all Claude Code projects</li>
+          <li>Parses new lines since its last check, extracting only conversational content (user messages and assistant text &mdash; not tool calls or file contents)</li>
+          <li>Sends the parsed conversation to the Haiku model with instructions to extract key events</li>
+          <li>Appends new bullet points to today's daily notes (or outputs nothing if there's nothing new)</li>
+        </ol>
+        <p class="text-stone leading-relaxed mb-4">The observer tracks its progress via an offset file (<code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/.observer-offset</code>), so it never re-processes old content and never duplicates entries.</p>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- How Context Gets Loaded -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16">How Context Gets Loaded</h2>
+        <p class="text-stone leading-relaxed mb-4">At the start of every session, the <a href="architecture.html" class="text-sand hover:text-sand/70">superbot launcher</a> reads all memory files and injects them into the system prompt:</p>
+        <ol class="text-stone space-y-2 mb-6 list-decimal pl-5">
+          <li>MEMORY.md &mdash; full contents</li>
+          <li>Today's daily notes &mdash; full contents (if they exist)</li>
+          <li>Yesterday's daily notes &mdash; full contents (if they exist)</li>
+        </ol>
+        <p class="text-stone leading-relaxed mb-4">This happens automatically. No manual loading required.</p>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- What Gets Updated When -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16">What Gets Updated When</h2>
+        <div class="overflow-x-auto mb-6">
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-left uppercase tracking-wider text-stone/60 text-xs pb-3 pr-4 font-medium">File</th>
+                <th class="text-left uppercase tracking-wider text-stone/60 text-xs pb-3 pr-4 font-medium">Updated By</th>
+                <th class="text-left uppercase tracking-wider text-stone/60 text-xs pb-3 font-medium">When</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-stone border-b border-border py-3 pr-4">MEMORY.md</td>
+                <td class="text-stone border-b border-border py-3 pr-4">User, Claude, heartbeat worker</td>
+                <td class="text-stone border-b border-border py-3">When learning something worth keeping</td>
+              </tr>
+              <tr>
+                <td class="text-stone border-b border-border py-3 pr-4">daily/YYYY-MM-DD.md</td>
+                <td class="text-stone border-b border-border py-3 pr-4">Session observer, heartbeat worker, manual</td>
+                <td class="text-stone border-b border-border py-3">Auto every 30 min + manual</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 my-12"></div>
+
+      <!-- Privacy -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16">Privacy</h2>
+        <p class="text-stone leading-relaxed mb-4">All memory files are local to your machine in <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/</code>. Nothing is synced, shared, or uploaded.</p>
+        <p class="text-stone leading-relaxed mb-4">Personal context from IDENTITY.md, USER.md, and MEMORY.md stays between you and superbot. It's never leaked into public outputs, shared contexts, or messages to others unless you explicitly ask.</p>
+        <blockquote class="border-l-2 border-sand/40 pl-6 py-2 text-stone/70 italic my-8">You have access to someone's life &mdash; their messages, files, calendar, maybe even their home. That's intimacy. Treat it with respect.</blockquote>
+      </section>
+
+      <!-- Footer -->
+      <div class="w-full h-px bg-border mb-8 mt-16"></div>
+      <footer class="text-stone/40 text-xs tracking-wide">
+        superbot
+      </footer>
+
+    </main>
+  </div>
+
+  <script>
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('hidden');
+    }
+    document.getElementById('mobile-toggle').addEventListener('click', toggleSidebar);
+
+    // Intersection Observer for scroll reveals
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => {
+            entry.target.classList.add('visible');
+          }, index * 40);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px 50px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "superbot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Superbot - Claude Code persistent identity plugin",
+  "scripts": {
+    "dashboard": "node dashboard/server.js"
+  },
+  "dependencies": {
+    "@slack/bolt": "^4.1.0"
+  }
+}

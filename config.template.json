@@ -1,0 +1,16 @@
+{
+  "projectsDir": "~/projects",
+  "defaultModel": "opus",
+  "slack": {
+    "botToken": "",
+    "appToken": ""
+  },
+  "schedule": [],
+  "heartbeat": {
+    "intervalMinutes": 30,
+    "model": "opus"
+  },
+  "scheduler": {
+    "model": "opus"
+  }
+}

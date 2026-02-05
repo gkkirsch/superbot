@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <title>Architecture — Superbot Docs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0a0a0a',
+            surface: '#141414',
+            parchment: '#d4cdc4',
+            stone: '#706b63',
+            sand: '#c4a882', ember: '#DC504A',
+            moss: '#8a9a7b',
+            border: '#1f1f1e',
+            codebg: '#111110',
+          },
+          fontFamily: {
+            mono: ['"Space Mono"', 'monospace'],
+            heading: ['"Space Mono"', 'monospace'],
+            body: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: #2a2a28; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a38; }
+
+    /* Selection */
+    ::selection { background: rgba(196, 168, 130, 0.25); color: #d4cdc4; }
+
+    /* Fade-in animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .fade-up {
+      opacity: 0;
+      animation: fadeUp 0.6s ease-out forwards;
+    }
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    .delay-5 { animation-delay: 0.5s; }
+    .delay-6 { animation-delay: 0.6s; }
+    .delay-7 { animation-delay: 0.7s; }
+    .delay-8 { animation-delay: 0.8s; }
+
+    /* Sidebar active indicator */
+    .nav-link { position: relative; transition: color 0.2s ease, background 0.2s ease; }
+    .nav-link::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      height: 0;
+      background: #DC504A;
+      transition: height 0.2s ease;
+    }
+    .nav-link:hover::before, .nav-link.active::before { height: 60%; }
+    .nav-link.active { color: #DC504A; }
+
+    /* Intersection Observer reveals */
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Mobile sidebar */
+    @media (max-width: 1024px) {
+      .sidebar-panel {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      .sidebar-panel.open {
+        transform: translateX(0);
+      }
+    }
+  </style>
+</head>
+<body class="bg-ink text-parchment font-body leading-relaxed min-h-screen">
+
+  <!-- Mobile toggle -->
+  <button id="mobile-toggle" class="lg:hidden fixed top-5 left-5 z-[200] bg-surface border border-border rounded px-2.5 py-2 text-parchment/70 hover:text-parchment transition-colors">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/50 z-[90] hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar-panel w-[260px] flex-shrink-0 bg-surface border-r border-border fixed top-0 left-0 bottom-0 z-[100] overflow-y-auto lg:translate-x-0">
+      <div class="px-6 pt-8 pb-6 border-b border-border">
+        <a href="index.html" class="no-underline">
+          <img src="superbotlogo.svg" alt="superbot" class="h-6">
+          <span class="text-stone text-xs tracking-[0.15em] uppercase mt-1 block">documentation</span>
+        </a>
+      </div>
+      <nav class="px-4 py-6 space-y-1">
+        <a href="index.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Home</a>
+        <a href="getting-started.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Getting Started</a>
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Features</div>
+        <a href="commands.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Commands</a>
+        <a href="memory.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Memory</a>
+        <a href="heartbeat.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Heartbeat</a>
+        <a href="scheduler.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Scheduler</a>
+        <a href="slack.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Slack</a>
+        <a href="skills.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Skills</a>
+
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Reference</div>
+        <a href="architecture.html" class="nav-link active block px-4 py-2 text-sm rounded text-ember">Architecture</a>
+        <a href="prompt.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">System Prompt</a>
+        <a href="files.html" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">File Reference</a>
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 lg:ml-[260px] px-6 md:px-12 lg:px-16 py-16 md:py-20 max-w-[860px]">
+
+      <!-- Page header -->
+      <div class="mb-16 fade-up">
+        <h1 class="font-heading text-4xl md:text-5xl font-light tracking-wide text-parchment mb-4">Architecture</h1>
+        <p class="text-stone text-lg fade-up delay-1">How all the pieces fit together.</p>
+      </div>
+
+      <!-- Divider -->
+      <div class="w-12 h-px bg-sand/30 mb-12 fade-up delay-2"></div>
+
+      <!-- System Prompt Assembly -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">System Prompt Assembly</h2>
+        <p class="text-stone leading-relaxed mb-6">The core of superbot is context assembly. Every session, the <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">superbot</code> launcher script reads live files and concatenates them into a single system prompt. This is how superbot &ldquo;remembers&rdquo; &mdash; by re-reading files at startup. Each section is separated by <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">---</code> dividers and the entire assembled string is passed as <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">--system-prompt</code> to the <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">claude</code> CLI.</p>
+        <p class="text-stone leading-relaxed mb-6">See the <a href="prompt.html" class="text-sand hover:text-sand/70 underline-offset-4 hover:underline">System Prompt</a> page for the full concatenation order, each section's contents, and the assembly code.</p>
+      </section>
+
+      <!-- The Launcher Script -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">The Launcher Script</h2>
+        <p class="text-stone leading-relaxed mb-4">The <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">superbot</code> file at the repo root is a bash script that:</p>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>#!/bin/bash
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+
+# 1. Auto-run setup if not initialized
+# 2. Gather environment context (cwd, git, platform, date)
+# 3. Assemble system prompt from all context files
+# 4. Launch claude with assembled context
+
+exec claude \
+  --system-prompt "$CONTEXT" \
+  --dangerously-skip-permissions \
+  --plugin-dir "$PLUGIN_ROOT" \
+  --team-name superbot \
+  --agent-name superbot \
+  --agent-id superbot@superbot \
+  "$@"</code></pre>
+        <p class="text-stone leading-relaxed mb-4">Key flags:</p>
+        <ul class="text-stone space-y-2 mb-6 list-disc pl-5">
+          <li><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">--system-prompt</code> &mdash; the assembled context string</li>
+          <li><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">--dangerously-skip-permissions</code> &mdash; trusts superbot to act freely</li>
+          <li><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">--plugin-dir</code> &mdash; points to the superbot repo for commands and skills</li>
+          <li><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">--team-name superbot</code> &mdash; enables Agent Teams for the superbot team</li>
+          <li><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">--agent-name superbot</code> &mdash; identifies this as the team lead</li>
+          <li><code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">--agent-id superbot@superbot</code> &mdash; fixed agent ID for messaging</li>
+        </ul>
+      </section>
+
+      <!-- File Layout -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">File Layout</h2>
+
+        <h3 class="font-heading text-xl font-light mb-4 mt-8 text-parchment">Repository (<code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/superbot/</code>)</h3>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-xs text-stone whitespace-pre overflow-x-auto">superbot/
++-- superbot                  # Launcher script
++-- package.json              # Node dependencies (@slack/bolt)
++-- .claude-plugin/
+|   +-- plugin.json           # Plugin metadata
++-- hooks/
+|   +-- hooks.json            # Session hooks (currently empty)
++-- config.template.json      # Default config (copied on setup)
++-- commands/                 # Slash command definitions
+|   +-- doctor.md
+|   +-- onboard.md
+|   +-- restart.md
+|   +-- skills.md
+|   +-- slack-setup.md
+|   +-- status.md
++-- skills/                   # Built-in skill definitions
+|   +-- superbot/SKILL.md
+|   +-- slack/SKILL.md
+|   +-- gog/SKILL.md
++-- scripts/                  # Implementation scripts
+|   +-- setup.sh
+|   +-- spawn-worker.sh        # Unified worker spawner (Slack + project)
+|   +-- slack-worker-prompt.md  # System prompt for Slack workers
+|   +-- project-worker-prompt.md # System prompt for project workers
+|   +-- heartbeat-cron.sh
+|   +-- triage.sh
+|   +-- triage-prompt.md
+|   +-- worker-prompt.md
+|   +-- daily-observer.sh
+|   +-- parse-session.sh
+|   +-- observer-prompt.md
+|   +-- scheduler.sh
+|   +-- slack-bot.js
+|   +-- slack-send.sh
+|   +-- slack-manifest.json
+|   +-- install-launchd.sh
+|   +-- install-scheduler.sh
+|   +-- install-slack.sh
+|   +-- uninstall-launchd.sh
+|   +-- uninstall-slack.sh
+|   +-- inject-context.sh
+|   +-- status.sh
+|   +-- doctor.sh
+|   +-- test-triage.sh
+|   +-- test-worker.sh
++-- templates/                # Config file templates
+|   +-- SYSTEM.md
+|   +-- IDENTITY.md
+|   +-- USER.md
+|   +-- MEMORY.md
+|   +-- HEARTBEAT.md
+|   +-- ONBOARD.md
+|   +-- CLAUDE_SYSTEM_PROMPT.md
++-- docs/                     # This documentation site</pre>
+
+        <h3 class="font-heading text-xl font-light mb-4 mt-8 text-parchment">User config (<code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/</code>)</h3>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-xs text-stone whitespace-pre overflow-x-auto">~/.superbot/
++-- config.json                # Settings (created from config.template.json)
++-- IDENTITY.md               # Bot personality (user-edited)
++-- USER.md                   # User profile (user-edited)
++-- MEMORY.md                 # Persistent memories (auto-updated)
++-- HEARTBEAT.md              # Task queue (auto-updated by worker)
++-- ONBOARD.md                # Onboarding script (deleted after first run)
++-- sessions.json              # Worker session registry
++-- schedule-last-run.json    # Scheduler dedup tracking
++-- daily/
+|   +-- 2026-02-06.md         # Today's notes
+|   +-- 2026-02-05.md
++-- logs/
+|   +-- heartbeat.log         # Cron activity log
+|   +-- slack-bot.log         # Slack bot activity
+|   +-- scheduler.log         # Scheduler activity
++-- prompts/
+|   +-- heartbeat.md          # Worker instructions (customizable)
++-- .observer-offset           # Observer progress tracking</pre>
+
+        <h3 class="font-heading text-xl font-light mb-4 mt-8 text-parchment">Team directory (<code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.claude/teams/superbot/</code>)</h3>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-xs text-stone whitespace-pre overflow-x-auto">~/.claude/teams/superbot/
++-- config.json               # Team config with lead session ID
++-- inboxes/
+    +-- superbot.json          # Team lead's inbox
+    +-- heartbeat.json         # Heartbeat worker's inbox</pre>
+      </section>
+
+      <!-- Worker Architecture -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Worker Architecture</h2>
+        <p class="text-stone leading-relaxed mb-4">Superbot uses a <strong class="text-parchment font-medium">router + worker</strong> pattern. The main session is a pure router that never does work itself &mdash; it forwards messages to workers spawned via <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">spawn-worker.sh</code>.</p>
+        <p class="text-stone leading-relaxed mb-4">Workers are persistent Claude sessions created with <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">claude -p</code> using <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">--session-id</code> and <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">--resume</code>. They do NOT use SendMessage or Agent Teams &mdash; they respond via <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">-p</code> output, and the result is dropped into superbot's inbox.</p>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-xs text-stone whitespace-pre overflow-x-auto">Main session (superbot, router)
+    |
+    +-- Inbox: ~/.claude/teams/superbot/inboxes/superbot.json
+    |   (receives worker results and Slack bot messages)
+    |
+    +-- spawn-worker.sh (single script for all worker types)
+    |   +-- Slack workers: uses slack-worker-prompt.md
+    |   +-- Project workers: uses project-worker-prompt.md (--project flag)
+    |   +-- Creates/resumes persistent sessions (claude -p)
+    |   +-- Runs in background, drops result into superbot inbox
+    |
+    +-- Sessions registry: ~/.superbot/sessions.json
+    |   (tracks all worker sessions, thread mappings, status)
+    |
+    +-- Heartbeat worker (teammate, separate)
+    |   +-- Inbox: ~/.claude/teams/superbot/inboxes/heartbeat.json
+    |   +-- Spawned by heartbeat-cron.sh every 30 min
+    |
+    +-- Slack bot (Node.js, routes messages to superbot inbox)
+        +-- Writes directly to superbot.json
+        +-- Not a Claude agent</pre>
+      </section>
+
+      <!-- Hook System -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Hook System</h2>
+        <p class="text-stone leading-relaxed mb-4">The <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">hooks/hooks.json</code> file is reserved for session event hooks. It's currently empty:</p>
+        <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code>{
+  "description": "Superbot session hooks",
+  "hooks": {}
+}</code></pre>
+        <p class="text-stone leading-relaxed mb-6">Hooks can respond to events like session start, tool calls, etc. The system is in place for future use.</p>
+      </section>
+
+      <!-- How Context Gets Loaded Everywhere -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">How Context Gets Loaded Everywhere</h2>
+        <p class="text-stone leading-relaxed mb-6">Multiple entry points use the same pattern: read context files, assemble them, pass to Claude. This ensures consistent context across:</p>
+        <div class="overflow-x-auto mb-6">
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="border-b border-border">
+                <th class="text-left py-3 px-4 text-parchment font-medium font-heading text-base tracking-wide">Entry Point</th>
+                <th class="text-left py-3 px-4 text-parchment font-medium font-heading text-base tracking-wide">Context Source</th>
+                <th class="text-left py-3 px-4 text-parchment font-medium font-heading text-base tracking-wide">Model</th>
+              </tr>
+            </thead>
+            <tbody class="text-stone">
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Main session</td>
+                <td class="py-3 px-4">Launcher script (all files)</td>
+                <td class="py-3 px-4">User's default</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Session observer</td>
+                <td class="py-3 px-4">daily-observer.sh (parsed session + existing daily notes)</td>
+                <td class="py-3 px-4">Haiku</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Heartbeat worker</td>
+                <td class="py-3 px-4">heartbeat-cron.sh (IDENTITY, USER, MEMORY, HEARTBEAT)</td>
+                <td class="py-3 px-4">Opus (configurable)</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Scheduler jobs</td>
+                <td class="py-3 px-4">scheduler.sh (IDENTITY, USER, MEMORY)</td>
+                <td class="py-3 px-4">Opus (configurable)</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Slack workers</td>
+                <td class="py-3 px-4">spawn-worker.sh (slack-worker-prompt.md)</td>
+                <td class="py-3 px-4">Opus (configurable)</td>
+              </tr>
+              <tr class="border-b border-border/50">
+                <td class="py-3 px-4">Project workers</td>
+                <td class="py-3 px-4">spawn-worker.sh --project (project-worker-prompt.md)</td>
+                <td class="py-3 px-4">Opus (configurable)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-stone leading-relaxed mb-6">Workers read their own context files at runtime. The Slack bot writes incoming messages to superbot's inbox but does not invoke Claude directly &mdash; that's handled by the workers spawned via <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">spawn-worker.sh</code>.</p>
+      </section>
+
+      <!-- Key Design Decisions -->
+      <section class="reveal">
+        <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Key Design Decisions</h2>
+        <ul class="text-stone space-y-2 mb-6 list-disc pl-5">
+          <li><strong class="text-parchment font-medium">Files over databases</strong> &mdash; everything is plain markdown and JSON. Git-friendly, human-readable, no server required.</li>
+          <li><strong class="text-parchment font-medium">Haiku triage</strong> &mdash; cheap model decides if expensive work is needed. Saves compute on quiet periods.</li>
+          <li><strong class="text-parchment font-medium">Router pattern</strong> &mdash; the main superbot session routes messages to workers and never does Slack work itself. Workers are persistent Claude sessions with their own session IDs.</li>
+          <li><strong class="text-parchment font-medium">Persistent worker sessions</strong> &mdash; workers use <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">claude -p</code> with <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">--session-id</code> and <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">--resume</code>. Thread replies resume the same session.</li>
+          <li><strong class="text-parchment font-medium">Socket Mode</strong> &mdash; Slack bot initiates connection (no webhook URL needed), works behind firewalls.</li>
+          <li><strong class="text-parchment font-medium">Sessions registry</strong> &mdash; <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">sessions.json</code> tracks all worker sessions, their Slack thread mappings, and status.</li>
+          <li><strong class="text-parchment font-medium">No persistent process</strong> &mdash; the main session is a normal Claude CLI invocation. Only the heartbeat cron, scheduler, and Slack bot run continuously.</li>
+        </ul>
+      </section>
+
+      <!-- Footer -->
+      <div class="w-full h-px bg-border mb-8 mt-16"></div>
+      <footer class="text-stone/40 text-xs tracking-wide">
+        superbot
+      </footer>
+
+    </main>
+  </div>
+
+  <script>
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('hidden');
+    }
+    document.getElementById('mobile-toggle').addEventListener('click', toggleSidebar);
+
+    // Intersection Observer for scroll reveals
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => {
+            entry.target.classList.add('visible');
+          }, index * 40);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px 50px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

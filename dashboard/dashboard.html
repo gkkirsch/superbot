@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <title>Superbot — Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0a0a0a',
+            surface: '#141414',
+            parchment: '#d4cdc4',
+            stone: '#706b63',
+            sand: '#c4a882',
+            ember: '#DC504A',
+            moss: '#8a9a7b',
+            border: '#1f1f1e',
+            codebg: '#111110',
+          },
+          fontFamily: {
+            mono: ['"Space Mono"', 'monospace'],
+            heading: ['"Space Mono"', 'monospace'],
+            body: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: #2a2a28; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a38; }
+    ::selection { background: rgba(196, 168, 130, 0.25); color: #d4cdc4; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { opacity: 0; animation: fadeUp 0.6s ease-out forwards; }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+
+    .nav-link { position: relative; transition: color 0.2s ease, background 0.2s ease; cursor: pointer; }
+    .nav-link::before {
+      content: '';
+      position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      width: 2px; height: 0; background: #DC504A; transition: height 0.2s ease;
+    }
+    .nav-link:hover::before, .nav-link.active::before { height: 60%; }
+    .nav-link.active { color: #DC504A; }
+
+    @media (max-width: 1024px) {
+      .sidebar-panel { transform: translateX(-100%); transition: transform 0.3s ease; }
+      .sidebar-panel.open { transform: translateX(0); }
+    }
+
+    /* Markdown prose styling */
+    .prose h1 { font-size: 1.5rem; font-weight: 700; margin: 1.5rem 0 0.75rem; color: #d4cdc4; font-family: 'Space Mono', monospace; }
+    .prose h2 { font-size: 1.25rem; font-weight: 700; margin: 1.25rem 0 0.5rem; color: #d4cdc4; font-family: 'Space Mono', monospace; }
+    .prose h3 { font-size: 1.1rem; font-weight: 700; margin: 1rem 0 0.5rem; color: #d4cdc4; font-family: 'Space Mono', monospace; }
+    .prose p { margin: 0.5rem 0; color: #706b63; line-height: 1.7; }
+    .prose ul, .prose ol { margin: 0.5rem 0; padding-left: 1.5rem; color: #706b63; }
+    .prose li { margin: 0.25rem 0; line-height: 1.6; }
+    .prose code { background: #111110; color: #c4a882; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.85em; font-family: 'Space Mono', monospace; }
+    .prose pre { background: #111110; padding: 1rem; border-radius: 6px; overflow-x: auto; margin: 0.75rem 0; border: 1px solid #1f1f1e; }
+    .prose pre code { background: none; padding: 0; color: #d4cdc4; }
+    .prose strong { color: #d4cdc4; font-weight: 600; }
+    .prose a { color: #c4a882; text-decoration: underline; }
+    .prose blockquote { border-left: 3px solid #c4a882; padding-left: 1rem; color: #706b63; margin: 0.75rem 0; }
+    .prose hr { border: none; border-top: 1px solid #1f1f1e; margin: 1.5rem 0; }
+    .prose input[type="checkbox"] { margin-right: 0.4rem; accent-color: #DC504A; }
+
+    /* Log viewer */
+    .log-viewer { font-family: 'Space Mono', monospace; font-size: 0.75rem; line-height: 1.5; white-space: pre-wrap; word-break: break-all; color: #706b63; }
+  </style>
+</head>
+<body class="bg-ink text-parchment font-body leading-relaxed min-h-screen">
+
+  <!-- Mobile toggle -->
+  <button id="mobile-toggle" class="lg:hidden fixed top-5 left-5 z-[200] bg-surface border border-border rounded px-2.5 py-2 text-parchment/70 hover:text-parchment transition-colors">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/50 z-[90] hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar-panel w-[260px] flex-shrink-0 bg-surface border-r border-border fixed top-0 left-0 bottom-0 z-[100] overflow-y-auto lg:translate-x-0">
+      <div class="px-6 pt-8 pb-6 border-b border-border">
+        <div class="font-heading text-lg text-parchment tracking-wide">superbot</div>
+        <span class="text-stone text-xs tracking-[0.15em] uppercase mt-1 block">dashboard</span>
+      </div>
+      <nav id="nav" class="px-4 py-6 space-y-1">
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-2 pb-2">Dashboard</div>
+        <a data-page="overview" class="nav-link active block px-4 py-2 text-sm rounded text-ember">Overview</a>
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Context</div>
+        <a data-page="identity" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Identity</a>
+        <a data-page="user" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">User</a>
+        <a data-page="memory" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Memory</a>
+        <a data-page="heartbeat" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Heartbeat</a>
+        <a data-page="onboard" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Onboard</a>
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Activity</div>
+        <a data-page="daily" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Daily Notes</a>
+        <a data-page="sessions" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Sessions</a>
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">Team</div>
+        <a data-page="team" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Team Config</a>
+        <a data-page="inbox" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Inbox</a>
+        <a data-page="tasks" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Tasks</a>
+
+        <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 px-4 pt-6 pb-2">System</div>
+        <a data-page="config" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Config</a>
+        <a data-page="skills" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Skills</a>
+        <a data-page="schedule" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Schedule</a>
+        <a data-page="logs" class="nav-link block px-4 py-2 text-sm rounded text-stone hover:text-parchment">Logs</a>
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 lg:ml-[260px] px-6 md:px-12 lg:px-16 py-16 md:py-20 max-w-[960px]">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-12 fade-up">
+        <div>
+          <h1 id="page-title" class="font-heading text-2xl md:text-3xl font-light tracking-wide text-parchment">Overview</h1>
+          <p id="last-updated" class="text-stone text-xs mt-1"></p>
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="flex items-center gap-2 text-stone text-xs cursor-pointer select-none">
+            <input type="checkbox" id="auto-poll" class="accent-ember">
+            Auto
+          </label>
+          <button id="refresh-btn" class="bg-surface border border-border rounded px-3 py-1.5 text-stone text-xs hover:text-parchment hover:border-stone/40 transition-colors font-mono">
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="w-12 h-px bg-sand/30 mb-12 fade-up delay-1"></div>
+
+      <!-- Content area -->
+      <div id="content" class="fade-up delay-2"></div>
+
+      <!-- Footer -->
+      <div class="w-full h-px bg-border mb-8 mt-20"></div>
+      <footer class="text-stone/40 text-xs tracking-wide">superbot dashboard</footer>
+    </main>
+  </div>
+
+<script>
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let currentPage = 'overview';
+let pollTimer = null;
+
+// ---------------------------------------------------------------------------
+// Navigation
+// ---------------------------------------------------------------------------
+document.getElementById('nav').addEventListener('click', (e) => {
+  const link = e.target.closest('[data-page]');
+  if (!link) return;
+  navigate(link.dataset.page);
+});
+
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-link').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === page);
+    el.classList.toggle('text-ember', el.dataset.page === page);
+    el.classList.toggle('text-stone', el.dataset.page !== page);
+  });
+  document.getElementById('page-title').textContent = pageTitle(page);
+  loadPage(page);
+  // Close mobile sidebar
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.add('hidden');
+}
+
+function pageTitle(page) {
+  const titles = {
+    overview: 'Overview', identity: 'Identity', user: 'User Profile',
+    memory: 'Memory', heartbeat: 'Heartbeat', onboard: 'Onboard',
+    daily: 'Daily Notes', sessions: 'Sessions', team: 'Team Config',
+    inbox: 'Inbox', tasks: 'Tasks', config: 'Config', skills: 'Skills',
+    schedule: 'Schedule', logs: 'Logs',
+  };
+  return titles[page] || page;
+}
+
+// ---------------------------------------------------------------------------
+// Data fetching
+// ---------------------------------------------------------------------------
+async function api(url) {
+  const res = await fetch(url);
+  return res.json();
+}
+
+function updateTimestamp() {
+  document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+// ---------------------------------------------------------------------------
+// Page renderers
+// ---------------------------------------------------------------------------
+async function loadPage(page) {
+  const el = document.getElementById('content');
+  el.innerHTML = '<p class="text-stone text-sm">Loading...</p>';
+  try {
+    switch (page) {
+      case 'overview': return renderOverview(el);
+      case 'identity': return renderMarkdown(el, '/api/identity');
+      case 'user': return renderMarkdown(el, '/api/user');
+      case 'memory': return renderMarkdown(el, '/api/memory');
+      case 'heartbeat': return renderMarkdown(el, '/api/heartbeat');
+      case 'onboard': return renderMarkdown(el, '/api/onboard');
+      case 'daily': return renderDaily(el);
+      case 'sessions': return renderSessions(el);
+      case 'team': return renderTeam(el);
+      case 'inbox': return renderInbox(el);
+      case 'tasks': return renderTasks(el);
+      case 'config': return renderConfig(el);
+      case 'skills': return renderSkills(el);
+      case 'schedule': return renderSchedule(el);
+      case 'logs': return renderLogs(el);
+    }
+  } catch (err) {
+    el.innerHTML = `<p class="text-ember text-sm">Error: ${esc(err.message)}</p>`;
+  }
+  updateTimestamp();
+}
+
+// Overview
+async function renderOverview(el) {
+  const data = await api('/api/status');
+  const checks = data.fileChecks.map(f =>
+    `<div class="flex items-center gap-3 py-2 border-b border-border/50">
+      <span class="${f.exists ? 'text-moss' : 'text-ember'} text-sm">${f.exists ? '&#10003;' : '&#10007;'}</span>
+      <span class="text-parchment text-sm font-mono">${esc(f.name)}</span>
+      <span class="text-stone text-xs ml-auto">${f.exists ? f.lines + ' lines' : 'missing'}</span>
+    </div>`
+  ).join('');
+
+  el.innerHTML = `
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+      ${statCard('Daily Notes', data.dailyCount)}
+      ${statCard('Active Sessions', data.activeSessions + ' / ' + data.totalSessions)}
+      ${statCard('Pending Tasks', data.pendingTasks)}
+      ${statCard('Unread Messages', data.totalUnread)}
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-surface border border-border rounded-lg p-6">
+        <h3 class="font-heading text-sm text-sand mb-4">Context Files</h3>
+        ${checks}
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-6">
+        <h3 class="font-heading text-sm text-sand mb-4">System</h3>
+        <div class="flex items-center gap-3 py-2 border-b border-border/50">
+          <span class="${data.launchdRunning ? 'text-moss' : 'text-ember'} text-sm">${data.launchdRunning ? '&#10003;' : '&#10007;'}</span>
+          <span class="text-parchment text-sm">Heartbeat launchd job</span>
+          <span class="text-stone text-xs ml-auto">${data.launchdRunning ? 'running' : 'not found'}</span>
+        </div>
+        <div class="flex items-center gap-3 py-2">
+          <span class="text-stone text-sm">&#9679;</span>
+          <span class="text-parchment text-sm">Dashboard</span>
+          <span class="text-moss text-xs ml-auto">running on :3274</span>
+        </div>
+      </div>
+    </div>`;
+  updateTimestamp();
+}
+
+function statCard(label, value) {
+  return `<div class="bg-surface border border-border rounded-lg p-5">
+    <div class="text-2xl font-heading text-parchment mb-1">${value}</div>
+    <div class="text-stone text-xs">${label}</div>
+  </div>`;
+}
+
+// Markdown pages
+async function renderMarkdown(el, url) {
+  const data = await api(url);
+  if (!data.exists) {
+    el.innerHTML = '<p class="text-stone text-sm">File not found.</p>';
+  } else {
+    el.innerHTML = `<div class="prose">${marked.parse(data.content)}</div>`;
+  }
+  updateTimestamp();
+}
+
+// Daily Notes
+async function renderDaily(el) {
+  const data = await api('/api/daily');
+  if (!data.files.length) {
+    el.innerHTML = '<p class="text-stone text-sm">No daily notes found.</p>';
+    updateTimestamp();
+    return;
+  }
+  const list = data.files.map(f =>
+    `<a class="daily-link block px-4 py-3 border-b border-border/50 text-sm hover:bg-ink/50 cursor-pointer transition-colors" data-date="${esc(f.date)}">
+      <span class="font-mono text-sand">${esc(f.date)}</span>
+      <span class="text-stone text-xs ml-3">${Math.round(f.size / 1024 * 10) / 10} KB</span>
+    </a>`
+  ).join('');
+  el.innerHTML = `
+    <div id="daily-list" class="bg-surface border border-border rounded-lg overflow-hidden mb-6">${list}</div>
+    <div id="daily-content"></div>`;
+  el.querySelectorAll('.daily-link').forEach(link => {
+    link.addEventListener('click', async () => {
+      const d = await api('/api/daily/' + link.dataset.date);
+      document.getElementById('daily-content').innerHTML = d.exists
+        ? `<h3 class="font-heading text-lg text-sand mb-4">${esc(link.dataset.date)}</h3><div class="prose">${marked.parse(d.content)}</div>`
+        : '<p class="text-stone text-sm">Not found.</p>';
+    });
+  });
+  updateTimestamp();
+}
+
+// Sessions
+async function renderSessions(el) {
+  const data = await api('/api/sessions');
+  const sessions = data.sessions || [];
+  if (!sessions.length) {
+    el.innerHTML = '<p class="text-stone text-sm">No sessions.</p>';
+    updateTimestamp();
+    return;
+  }
+  const rows = sessions.map(s =>
+    `<tr class="border-b border-border/50">
+      <td class="py-2 pr-4 font-mono text-sm text-parchment">${esc(s.name || s.sessionId || '?')}</td>
+      <td class="py-2 pr-4 text-sm text-stone">${esc(s.type || '-')}</td>
+      <td class="py-2 pr-4 text-sm ${s.status === 'active' ? 'text-moss' : 'text-stone'}">${esc(s.status || '-')}</td>
+      <td class="py-2 text-sm text-stone font-mono text-xs">${esc(s.sessionId ? s.sessionId.slice(0, 12) : '-')}</td>
+    </tr>`
+  ).join('');
+  el.innerHTML = `
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead><tr class="text-left text-xs text-stone/60 uppercase tracking-wider border-b border-border">
+          <th class="pb-2 pr-4">Name</th><th class="pb-2 pr-4">Type</th><th class="pb-2 pr-4">Status</th><th class="pb-2">Session ID</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  updateTimestamp();
+}
+
+// Team
+async function renderTeam(el) {
+  const data = await api('/api/team');
+  const members = data.members || [];
+  if (!members.length) {
+    el.innerHTML = '<p class="text-stone text-sm">No team members.</p>';
+    updateTimestamp();
+    return;
+  }
+  const cards = members.map(m =>
+    `<div class="bg-surface border border-border rounded-lg p-4">
+      <div class="font-mono text-sm text-parchment mb-1">${esc(m.name || '?')}</div>
+      <div class="text-stone text-xs">${esc(m.agentType || m.role || '-')}</div>
+    </div>`
+  ).join('');
+  el.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">${cards}</div>`;
+  updateTimestamp();
+}
+
+// Inbox
+async function renderInbox(el) {
+  const data = await api('/api/inbox');
+  if (!data.inboxes.length) {
+    el.innerHTML = '<p class="text-stone text-sm">No inboxes.</p>';
+    updateTimestamp();
+    return;
+  }
+  const list = data.inboxes.map(ib =>
+    `<a class="inbox-link block px-4 py-3 border-b border-border/50 hover:bg-ink/50 cursor-pointer transition-colors flex items-center justify-between" data-name="${esc(ib.name)}">
+      <span class="font-mono text-sm text-parchment">${esc(ib.name)}</span>
+      <span class="flex items-center gap-2">
+        ${ib.unread > 0 ? `<span class="bg-ember text-white text-xs px-2 py-0.5 rounded-full">${ib.unread}</span>` : ''}
+        <span class="text-stone text-xs">${ib.total} msg</span>
+      </span>
+    </a>`
+  ).join('');
+  el.innerHTML = `
+    <div id="inbox-list" class="bg-surface border border-border rounded-lg overflow-hidden mb-6">${list}</div>
+    <div id="inbox-content"></div>`;
+  el.querySelectorAll('.inbox-link').forEach(link => {
+    link.addEventListener('click', async () => {
+      const d = await api('/api/inbox/' + link.dataset.name);
+      const msgs = (d.messages || []).slice().reverse();
+      if (!msgs.length) {
+        document.getElementById('inbox-content').innerHTML = '<p class="text-stone text-sm">Empty inbox.</p>';
+        return;
+      }
+      const cards = msgs.map(m =>
+        `<div class="bg-surface border border-border rounded-lg p-4 mb-3 ${m.read ? 'opacity-60' : ''}">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-mono ${m.read ? 'text-stone' : 'text-sand'}">${esc(m.from || '?')}</span>
+            <span class="text-xs text-stone">${m.timestamp ? new Date(m.timestamp).toLocaleString() : ''}</span>
+          </div>
+          <div class="text-sm text-stone mb-1">${esc(m.summary || '')}</div>
+          <details class="mt-2"><summary class="text-xs text-sand cursor-pointer">Full message</summary>
+            <pre class="log-viewer mt-2 p-3 bg-ink rounded border border-border">${esc(m.text || '')}</pre>
+          </details>
+        </div>`
+      ).join('');
+      document.getElementById('inbox-content').innerHTML =
+        `<h3 class="font-heading text-lg text-sand mb-4">${esc(d.name)}</h3>${cards}`;
+    });
+  });
+  updateTimestamp();
+}
+
+// Tasks
+async function renderTasks(el) {
+  const data = await api('/api/tasks');
+  if (!data.groups.length) {
+    el.innerHTML = '<p class="text-stone text-sm">No task groups.</p>';
+    updateTimestamp();
+    return;
+  }
+  const groups = data.groups.map(g => {
+    const items = g.tasks.map(t =>
+      `<div class="py-2 border-b border-border/50 flex items-center gap-3">
+        <span class="text-xs px-2 py-0.5 rounded ${statusColor(t.status)}">${esc(t.status || '?')}</span>
+        <span class="text-sm text-parchment">${esc(t.subject || t.title || t.id || '?')}</span>
+        ${t.owner ? `<span class="text-xs text-stone ml-auto">${esc(t.owner)}</span>` : ''}
+      </div>`
+    ).join('');
+    return `<div class="bg-surface border border-border rounded-lg p-5 mb-4">
+      <h3 class="font-heading text-sm text-sand mb-3">${esc(g.name)}</h3>
+      ${items || '<p class="text-stone text-xs">No tasks</p>'}
+    </div>`;
+  }).join('');
+  el.innerHTML = groups;
+  updateTimestamp();
+}
+
+function statusColor(s) {
+  if (s === 'completed') return 'bg-moss/20 text-moss';
+  if (s === 'in_progress') return 'bg-sand/20 text-sand';
+  return 'bg-stone/20 text-stone';
+}
+
+// Config
+async function renderConfig(el) {
+  const data = await api('/api/config');
+  el.innerHTML = `<pre class="log-viewer p-5 bg-surface border border-border rounded-lg">${esc(JSON.stringify(data, null, 2))}</pre>`;
+  updateTimestamp();
+}
+
+// Skills
+async function renderSkills(el) {
+  const data = await api('/api/skills');
+  if (!data.skills.length) {
+    el.innerHTML = '<p class="text-stone text-sm">No skills installed.</p>';
+    updateTimestamp();
+    return;
+  }
+  const rows = data.skills.map(s =>
+    `<div class="flex items-center gap-3 py-2 border-b border-border/50">
+      <span class="font-mono text-sm text-parchment">${esc(s.name)}</span>
+      ${s.isSymlink ? `<span class="text-xs text-sand">symlink</span><span class="text-xs text-stone/60 font-mono truncate ml-2">${esc(s.target || '')}</span>` : ''}
+    </div>`
+  ).join('');
+  el.innerHTML = `<div class="bg-surface border border-border rounded-lg p-5">${rows}</div>`;
+  updateTimestamp();
+}
+
+// Schedule
+async function renderSchedule(el) {
+  const data = await api('/api/schedule');
+  if (!data.schedule.length) {
+    el.innerHTML = '<p class="text-stone text-sm">No scheduled items.</p>';
+    updateTimestamp();
+    return;
+  }
+  const rows = data.schedule.map(s =>
+    `<div class="py-2 border-b border-border/50">
+      <div class="text-sm text-parchment">${esc(s.name || s.label || '?')}</div>
+      <div class="text-xs text-stone font-mono">${esc(s.cron || s.time || s.schedule || '')}</div>
+      ${s.command ? `<div class="text-xs text-stone/60 mt-1 font-mono">${esc(s.command)}</div>` : ''}
+    </div>`
+  ).join('');
+  el.innerHTML = `
+    <div class="bg-surface border border-border rounded-lg p-5 mb-4">${rows}</div>
+    ${data.lastRun ? `<p class="text-stone text-xs">Last run: <span class="font-mono">${esc(data.lastRun)}</span></p>` : ''}`;
+  updateTimestamp();
+}
+
+// Logs
+async function renderLogs(el) {
+  const data = await api('/api/logs');
+  if (!data.logs.length) {
+    el.innerHTML = '<p class="text-stone text-sm">No log files found.</p>';
+    updateTimestamp();
+    return;
+  }
+  const tabs = data.logs.map((l, i) =>
+    `<button class="log-tab px-3 py-1.5 text-xs font-mono rounded transition-colors ${i === 0 ? 'bg-ember/20 text-ember' : 'text-stone hover:text-parchment'}" data-idx="${i}">${esc(l.name)}</button>`
+  ).join('');
+  const viewers = data.logs.map((l, i) =>
+    `<pre class="log-viewer-pane p-4 bg-ink rounded border border-border log-viewer ${i === 0 ? '' : 'hidden'}" data-idx="${i}">${esc(l.lines)}</pre>`
+  ).join('');
+  el.innerHTML = `
+    <div class="flex gap-2 mb-4 flex-wrap">${tabs}</div>
+    <div class="bg-surface border border-border rounded-lg p-4">${viewers}</div>`;
+  // Tab switching
+  el.querySelectorAll('.log-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el.querySelectorAll('.log-tab').forEach(b => { b.classList.remove('bg-ember/20', 'text-ember'); b.classList.add('text-stone'); });
+      btn.classList.add('bg-ember/20', 'text-ember'); btn.classList.remove('text-stone');
+      el.querySelectorAll('.log-viewer-pane').forEach(p => p.classList.add('hidden'));
+      el.querySelector(`.log-viewer-pane[data-idx="${btn.dataset.idx}"]`).classList.remove('hidden');
+    });
+  });
+  // Auto-scroll to bottom
+  const visible = el.querySelector('.log-viewer-pane:not(.hidden)');
+  if (visible) visible.scrollTop = visible.scrollHeight;
+  updateTimestamp();
+}
+
+// ---------------------------------------------------------------------------
+// Utility
+// ---------------------------------------------------------------------------
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ---------------------------------------------------------------------------
+// Controls
+// ---------------------------------------------------------------------------
+document.getElementById('refresh-btn').addEventListener('click', () => loadPage(currentPage));
+
+document.getElementById('auto-poll').addEventListener('change', (e) => {
+  if (e.target.checked) {
+    pollTimer = setInterval(() => loadPage(currentPage), 10000);
+  } else {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+});
+
+// Mobile sidebar
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('hidden');
+}
+document.getElementById('mobile-toggle').addEventListener('click', toggleSidebar);
+
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
+loadPage('overview');
+</script>
+</body>
+</html>

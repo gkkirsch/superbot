@@ -1,0 +1,17 @@
+{
+  "name": "",
+  "slug": "",
+  "description": "",
+  "codeDir": "",
+  "status": "active",
+  "priority": "medium",
+  "tags": [],
+  "techStack": [],
+  "slackThreads": [],
+  "urls": {
+    "production": null,
+    "repo": null
+  },
+  "createdAt": "",
+  "updatedAt": ""
+}
