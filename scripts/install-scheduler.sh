@@ -4,6 +4,26 @@ set -e
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PLIST="$HOME/Library/LaunchAgents/com.claude.superbot-scheduler.plist"
 
+# Resolve node's real binary path and save it for LaunchAgent scripts.
+# LaunchAgents run in a minimal environment without the user's shell profile,
+# so we capture the real node location now while we have access to it.
+# Handles: Homebrew (ARM + Intel), asdf, nvm, volta, fnm, system installs.
+REAL_NODE=""
+if command -v asdf &>/dev/null; then
+  REAL_NODE=$(asdf which node 2>/dev/null)
+elif command -v volta &>/dev/null; then
+  REAL_NODE=$(volta which node 2>/dev/null)
+elif command -v fnm &>/dev/null; then
+  REAL_NODE=$(fnm exec --using=default -- which node 2>/dev/null)
+fi
+if [[ -z "$REAL_NODE" ]]; then
+  NODE_BIN=$(command -v node 2>/dev/null)
+  [[ -n "$NODE_BIN" ]] && REAL_NODE=$(readlink -f "$NODE_BIN" 2>/dev/null || realpath "$NODE_BIN" 2>/dev/null || echo "$NODE_BIN")
+fi
+if [[ -n "$REAL_NODE" ]]; then
+  echo "$(dirname "$REAL_NODE")" > "$HOME/.superbot/.node-path"
+fi
+
 mkdir -p "$HOME/Library/LaunchAgents"
 
 cat > "$PLIST" << EOF

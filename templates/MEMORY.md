@@ -1,9 +1,15 @@
 # Memory
 
-Notes and learnings that persist across sessions.
+High-level system map and quick reference. Keep this concise — detailed findings belong in projects.
 
-## Recent
-<!-- New memories go here -->
+## System
+<!-- Where things live, how things work, key paths -->
 
-## Reference
-<!-- Long-term useful info -->
+## Preferences
+<!-- User patterns, workflow habits, communication style -->
+
+## Decisions
+<!-- Key decisions and their reasoning (one-liners) -->
+
+## Lessons
+<!-- Mistakes made, things learned (brief, actionable) -->

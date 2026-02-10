@@ -1,12 +1,13 @@
 #!/bin/bash
 # create-project.sh — Initialize a new project with templates
-# Usage: create-project.sh <slug> "<name>" "<code-dir>" ["description"]
+# Usage: create-project.sh <slug> "<name>" [code-dir] [description]
 #
 # Creates:
 #   ~/.superbot/projects/<slug>/
 #     project.json, PLAN.md, README.md, tasks/, tasks/.highwatermark, docs/
 #
 # Examples:
+#   create-project.sh prompt-research "Prompt Research" "" "Research into prompt architecture"
 #   create-project.sh summary "Summary App" ~/dev/summary "Bird summary web app"
 #   create-project.sh nikole "Nikole Site" ~/dev/nikole
 
@@ -17,11 +18,11 @@ PROJECTS_DIR="$HOME/.superbot/projects"
 
 SLUG="$1"
 NAME="$2"
-CODE_DIR="$3"
+CODE_DIR="${3:-}"
 DESC="${4:-}"
 
-if [[ -z "$SLUG" || -z "$NAME" || -z "$CODE_DIR" ]]; then
-  echo "Usage: create-project.sh <slug> <name> <code-dir> [description]" >&2
+if [[ -z "$SLUG" || -z "$NAME" ]]; then
+  echo "Usage: create-project.sh <slug> <name> [code-dir] [description]" >&2
   exit 1
 fi
 
@@ -32,8 +33,8 @@ if [[ -d "$PROJECT_DIR" ]]; then
   exit 1
 fi
 
-# Expand ~ in code dir
-CODE_DIR="${CODE_DIR/#\~/$HOME}"
+# Expand ~ in code dir if provided
+[[ -n "$CODE_DIR" ]] && CODE_DIR="${CODE_DIR/#\~/$HOME}"
 
 # Create directory structure
 mkdir -p "$PROJECT_DIR/tasks"

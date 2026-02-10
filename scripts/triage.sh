@@ -1,4 +1,6 @@
 #!/bin/bash
+# Load node path resolved at install time (works across all node managers)
+[[ -f "$HOME/.superbot/.node-path" ]] && export PATH="$(cat "$HOME/.superbot/.node-path"):$PATH"
 export PATH="$HOME/.local/bin:$HOME/.asdf/shims:$HOME/.asdf/bin:$PATH"
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DIR="$HOME/.superbot"

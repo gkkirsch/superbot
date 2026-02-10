@@ -5,6 +5,31 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG="$HOME/.superbot/config.json"
 PLIST="$HOME/Library/LaunchAgents/com.claude.superbot-heartbeat.plist"
 
+# Resolve node's real binary path and save it for LaunchAgent scripts.
+# LaunchAgents run in a minimal environment without the user's shell profile,
+# so we capture the real node location now while we have access to it.
+# Handles: Homebrew (ARM + Intel), asdf, nvm, volta, fnm, system installs.
+REAL_NODE=""
+if command -v asdf &>/dev/null; then
+  REAL_NODE=$(asdf which node 2>/dev/null)
+elif command -v volta &>/dev/null; then
+  REAL_NODE=$(volta which node 2>/dev/null)
+elif command -v fnm &>/dev/null; then
+  REAL_NODE=$(fnm exec --using=default -- which node 2>/dev/null)
+fi
+# Fallback: resolve whatever `node` points to
+if [[ -z "$REAL_NODE" ]]; then
+  NODE_BIN=$(command -v node 2>/dev/null)
+  [[ -n "$NODE_BIN" ]] && REAL_NODE=$(readlink -f "$NODE_BIN" 2>/dev/null || realpath "$NODE_BIN" 2>/dev/null || echo "$NODE_BIN")
+fi
+if [[ -n "$REAL_NODE" ]]; then
+  NODE_DIR=$(dirname "$REAL_NODE")
+  echo "$NODE_DIR" > "$HOME/.superbot/.node-path"
+  echo "  Node found at: $NODE_DIR"
+else
+  echo "  Warning: node not found in PATH. Background scripts may not work."
+fi
+
 # Read interval from config.json (default: 30 minutes)
 INTERVAL_MIN=30
 if [[ -f "$CONFIG" ]]; then
