@@ -137,7 +137,7 @@ else
   cat > "$TEAM_DIR/config.json" <<TEAMCFG
 {
   "name": "superbot",
-  "description": "Superbot — team-lead orchestrates workers and heartbeat",
+  "description": "Superbot — team-lead orchestrates workers, heartbeat, and scheduler",
   "createdAt": $NOW_MS,
   "leadAgentId": "team-lead@superbot",
   "leadSessionId": "$LEAD_SESSION",
@@ -151,6 +151,28 @@ else
       "tmuxPaneId": "",
       "cwd": "$HOME/dev",
       "subscriptions": []
+    },
+    {
+      "agentId": "heartbeat@superbot",
+      "name": "heartbeat",
+      "agentType": "heartbeat",
+      "model": "claude-haiku-4-5-20251001",
+      "joinedAt": $NOW_MS,
+      "tmuxPaneId": "",
+      "cwd": "$HOME/dev",
+      "subscriptions": [],
+      "isBackground": true
+    },
+    {
+      "agentId": "scheduler@superbot",
+      "name": "scheduler",
+      "agentType": "scheduler",
+      "model": "claude-haiku-4-5-20251001",
+      "joinedAt": $NOW_MS,
+      "tmuxPaneId": "",
+      "cwd": "$HOME/dev",
+      "subscriptions": [],
+      "isBackground": true
     }
   ]
 }
@@ -159,7 +181,7 @@ TEAMCFG
 fi
 
 # Create empty inbox files if they don't exist
-for inbox in team-lead heartbeat; do
+for inbox in team-lead heartbeat scheduler; do
   if [[ ! -f "$TEAM_DIR/inboxes/$inbox.json" ]]; then
     echo "[]" > "$TEAM_DIR/inboxes/$inbox.json"
     echo "Created inbox: $inbox.json"

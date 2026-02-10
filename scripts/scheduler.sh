@@ -5,16 +5,16 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG="$HOME/.superbot/config.json"
 LAST_RUN="$DIR/schedule-last-run.json"
 LOG="$DIR/logs/scheduler.log"
+TEAM_DIR="$HOME/.claude/teams/superbot"
 
-# Exit silently if no config
+# Exit silently if no config or team not set up
 [[ ! -f "$CONFIG" ]] && exit 0
+[[ ! -f "$TEAM_DIR/config.json" ]] && exit 0
 
-# Read scheduler model from config (default: opus)
-export SCHEDULER_MODEL="opus"
-MODEL_FROM_CONFIG=$(jq -r '.scheduler.model // .defaultModel // "opus"' "$CONFIG")
-[[ -n "$MODEL_FROM_CONFIG" && "$MODEL_FROM_CONFIG" != "null" ]] && export SCHEDULER_MODEL="$MODEL_FROM_CONFIG"
+# Ensure log directory exists
+mkdir -p "$DIR/logs"
 
-# Extract schedule array to temp file for processing
+# Extract schedule array
 SCHEDULE_DATA=$(jq -r '.schedule // []' "$CONFIG")
 [[ "$SCHEDULE_DATA" == "[]" ]] && exit 0
 
@@ -53,46 +53,26 @@ if (due.length > 0) console.log(JSON.stringify(due));
 
 [[ -z "$RESULT" ]] && exit 0
 
-# Run each due job directly
-node -e "
-const { execSync } = require('child_process');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const due = JSON.parse(process.argv[1]);
-const dir = process.argv[2];
-const log = process.argv[3];
-const claudeBin = path.join(os.homedir(), '.local', 'bin', 'claude');
+# Drop each due job as a notification in team-lead's inbox
+INBOX="$TEAM_DIR/inboxes/team-lead.json"
 
-// Read context files for the worker
-const readFile = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch(_) { return ''; } };
-const identity = readFile(path.join(dir, 'IDENTITY.md'));
-const user = readFile(path.join(dir, 'USER.md'));
-const memory = readFile(path.join(dir, 'MEMORY.md'));
+echo "$RESULT" | jq -c '.[]' | while read -r JOB; do
+  JOB_NAME=$(echo "$JOB" | jq -r '.name')
+  JOB_TASK=$(echo "$JOB" | jq -r '.task')
+  JOB_TIME=$(echo "$JOB" | jq -r '.time')
 
-const context = [identity, user, memory].filter(Boolean).join('\n---\n');
-const ts = new Date().toISOString().replace('T', ' ').slice(0, 16);
+  MSG=$(jq -n \
+    --arg from "scheduler" \
+    --arg text "Scheduled job **$JOB_NAME** is due (${JOB_TIME}):\n\n$JOB_TASK" \
+    --arg summary "Scheduled: $JOB_NAME" \
+    --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{from: $from, text: $text, summary: $summary, timestamp: $ts, read: false}')
 
-for (const job of due) {
-  const prompt = [
-    '<superbot-context>',
-    context,
-    '</superbot-context>',
-    '',
-    'You are running a scheduled job: ' + job.name,
-    'Task: ' + job.task,
-  ].join('\n');
+  if [[ -f "$INBOX" ]] && jq -e '. | type == "array"' "$INBOX" >/dev/null 2>&1; then
+    jq --argjson msg "$MSG" '. + [$msg]' "$INBOX" > "$INBOX.tmp" && mv "$INBOX.tmp" "$INBOX"
+  else
+    echo "[$MSG]" > "$INBOX"
+  fi
 
-  fs.appendFileSync(log, ts + ' - Running: ' + job.name + '\n');
-
-  try {
-    const output = execSync(
-      [claudeBin, '-p', JSON.stringify(prompt), '--model', process.env.SCHEDULER_MODEL || 'opus', '--permission-mode', 'bypassPermissions'].join(' '),
-      { timeout: 300000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }
-    );
-    fs.appendFileSync(log, ts + ' - Completed: ' + job.name + '\n');
-  } catch (err) {
-    fs.appendFileSync(log, ts + ' - Failed: ' + job.name + ' - ' + (err.message || '').slice(0, 200) + '\n');
-  }
-}
-" "$RESULT" "$DIR" "$LOG" 2>> "$LOG"
+  echo "$(date '+%Y-%m-%d %H:%M') - Scheduled: $JOB_NAME → team-lead inbox" >> "$LOG"
+done
