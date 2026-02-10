@@ -15,7 +15,7 @@ Check if `~/.superbot/ONBOARD.md` exists. If it does NOT, the setup script hasn'
 > ```
 > bash <path-to-superbot>/scripts/setup.sh
 > ```
-> (Replace `<path-to-superbot>` with wherever the superbot repo is cloned — e.g., `~/dev/superbot`)
+> (Replace `<path-to-superbot>` with wherever the superbot repo is cloned — e.g., `~/.superbot-plugin`)
 
 Then stop. Do not continue with onboarding.
 
@@ -40,15 +40,16 @@ Read `~/.superbot/ONBOARD.md` for the onboarding guide. Then:
    https://skills.sh/api/search?q=<query>&limit=50
    ```
 
-### Step 3: Enable Heartbeat
+### Step 3: Enable Background Services
 
-Install the heartbeat background task:
+Install both the heartbeat and scheduler background tasks:
 
+```bash
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-heartbeat.sh
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-scheduler.sh
 ```
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-launchd.sh
-```
 
-No need to ask — just do it and inform the user it's active.
+No need to ask — just do it and inform the user they're active.
 
 ### Step 4: Cleanup
 

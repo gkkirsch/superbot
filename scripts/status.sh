@@ -21,7 +21,7 @@ echo "Scheduler:"
 if launchctl list 2>/dev/null | grep -q "com.claude.superbot-heartbeat"; then
   echo "  ✓ launchd job running"
 else
-  echo "  ✗ launchd job not found (run install-launchd.sh to enable)"
+  echo "  ✗ launchd job not found (run install-heartbeat.sh to enable)"
 fi
 echo ""
 

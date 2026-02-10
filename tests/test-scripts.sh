@@ -76,7 +76,7 @@ SCRIPTS_WITH_CONFIG=(
   "scheduler.sh"
   "spawn-worker.sh"
   "slack-send.sh"
-  "install-launchd.sh"
+  "install-heartbeat.sh"
   "install-slack.sh"
   "daily-observer.sh"
   "create-project.sh"
@@ -216,20 +216,20 @@ echo ""
 echo "Testing install script plist paths..."
 
 # Heartbeat
-INSTALL_LAUNCHD="$PLUGIN_ROOT/scripts/install-launchd.sh"
-if [[ -f "$INSTALL_LAUNCHD" ]]; then
-  if grep -q "com.claude.superbot-heartbeat" "$INSTALL_LAUNCHD"; then
-    pass "install-launchd.sh uses correct plist label"
+INSTALL_HEARTBEAT="$PLUGIN_ROOT/scripts/install-heartbeat.sh"
+if [[ -f "$INSTALL_HEARTBEAT" ]]; then
+  if grep -q "com.claude.superbot-heartbeat" "$INSTALL_HEARTBEAT"; then
+    pass "install-heartbeat.sh uses correct plist label"
   else
-    fail "install-launchd.sh uses wrong plist label"
+    fail "install-heartbeat.sh uses wrong plist label"
   fi
-  if grep -q 'Library/LaunchAgents' "$INSTALL_LAUNCHD"; then
-    pass "install-launchd.sh targets ~/Library/LaunchAgents"
+  if grep -q 'Library/LaunchAgents' "$INSTALL_HEARTBEAT"; then
+    pass "install-heartbeat.sh targets ~/Library/LaunchAgents"
   else
-    fail "install-launchd.sh targets wrong directory"
+    fail "install-heartbeat.sh targets wrong directory"
   fi
 else
-  fail "install-launchd.sh not found"
+  fail "install-heartbeat.sh not found"
 fi
 
 # Scheduler

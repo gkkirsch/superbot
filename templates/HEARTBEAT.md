@@ -1,9 +1,9 @@
-# Heartbeat Tasks
+# Heartbeat
 
-Background tasks for the heartbeat worker to process.
+Your to-do list. Add items under Active. The heartbeat checks every 30 minutes — if there are pending items, you'll get a notification.
 
 ## Active
 - [ ] Example: Set up your first heartbeat task
 
 ## Completed
-<!-- Worker logs completed tasks here -->
+<!-- Mark items [x] and move them here when done -->

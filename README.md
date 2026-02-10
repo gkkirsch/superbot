@@ -138,7 +138,9 @@ After setup, edit `~/.superbot/config.json` to configure:
 ## Uninstall
 
 ```bash
-~/.superbot-plugin/scripts/uninstall-launchd.sh  # Remove scheduler
-rm -rf ~/.superbot-plugin                         # Remove plugin
-rm -rf ~/.superbot                                # Remove config (optional)
+# Remove everything (state, services, skills, shell config)
+~/.superbot-plugin/scripts/uninstall.sh
+
+# Then remove the plugin directory itself
+rm -rf ~/.superbot-plugin
 ```
