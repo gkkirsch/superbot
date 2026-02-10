@@ -1,6 +1,6 @@
 ---
 description: Browse, install, and manage skills, plugins, and marketplaces
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion, WebFetch
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch
 ---
 
 Browse and manage extensions. There are **two separate systems** — know which is which.

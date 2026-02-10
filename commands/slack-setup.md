@@ -1,6 +1,6 @@
 ---
 description: Set up the Superbot Slack bot integration
-allowed-tools: Bash, Read, Write, Edit, AskUserQuestion
+allowed-tools: Bash, Read, Write, Edit
 ---
 
 Set up the Slack bot so users can talk to superbot via Slack DMs and @mentions.
@@ -53,7 +53,7 @@ After creating the app, tell them:
 
 ### Step 3: Collect Tokens
 
-Use AskUserQuestion to ask for both tokens:
+Ask the user conversationally for both tokens:
 
 1. Ask for the **App-Level Token** (xapp-...)
 2. Ask for the **Bot User OAuth Token** (xoxb-...)

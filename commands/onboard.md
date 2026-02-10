@@ -1,6 +1,6 @@
 ---
 description: Walk through superbot onboarding to configure identity and preferences
-allowed-tools: Bash, Read, Write, Edit, AskUserQuestion
+allowed-tools: Bash, Read, Write, Edit
 ---
 
 Onboard the user into superbot — configure identity, preferences, and skills.
@@ -26,7 +26,7 @@ If `~/.superbot/.setup-complete` exists, setup AND onboarding have already been 
 Read `~/.superbot/ONBOARD.md` for the onboarding guide. Then:
 
 1. Read `~/.superbot/IDENTITY.md` and `~/.superbot/USER.md` first — if they already have real content, use it as context and skip questions that are already answered
-2. Walk through each section **one at a time**, asking the user questions conversationally using AskUserQuestion or natural conversation
+2. Walk through each section **one at a time**, asking the user questions conversationally
 3. Don't ask all questions at once — have a back-and-forth dialogue, one section at a time
 4. After each section, write the user's answers into the appropriate file:
    - User info and preferences go into `~/.superbot/USER.md`
