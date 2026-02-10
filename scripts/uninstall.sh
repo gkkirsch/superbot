@@ -92,8 +92,20 @@ else
   echo "  Shell profile not found — check manually for superbot entries"
 fi
 
+# --- Remove plugin directory if installed to default location ---
+
+PLUGIN_DIR="$HOME/.superbot-plugin"
+if [[ -d "$PLUGIN_DIR" ]]; then
+  echo ""
+  echo "Removing plugin directory ($PLUGIN_DIR)..."
+  rm -rf "$PLUGIN_DIR"
+  echo "  Removed $PLUGIN_DIR"
+fi
+
 echo ""
 echo "Uninstall complete!"
-echo ""
-echo "The plugin directory ($PLUGIN_ROOT) was NOT removed."
-echo "To fully remove it: rm -rf $PLUGIN_ROOT"
+if [[ -d "$PLUGIN_ROOT" && "$PLUGIN_ROOT" != "$PLUGIN_DIR" ]]; then
+  echo ""
+  echo "Note: The plugin directory ($PLUGIN_ROOT) was NOT removed."
+  echo "To fully remove it: rm -rf $PLUGIN_ROOT"
+fi
