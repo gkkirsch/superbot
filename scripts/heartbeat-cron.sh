@@ -23,8 +23,8 @@ if "$PLUGIN_ROOT/scripts/triage.sh"; then
   # Extract pending (unchecked) tasks
   PENDING=$(grep '^\- \[ \]' "$DIR/HEARTBEAT.md" 2>/dev/null | sed 's/^- \[ \] //' || echo "Check HEARTBEAT.md for details.")
 
-  # Drop a notification in superbot's inbox
-  INBOX="$TEAM_DIR/inboxes/superbot.json"
+  # Drop a notification in team-lead's inbox
+  INBOX="$TEAM_DIR/inboxes/team-lead.json"
   MSG=$(jq -n \
     --arg from "heartbeat" \
     --arg text "You have pending heartbeat items that need attention:\n\n$PENDING\n\nCheck HEARTBEAT.md, work through them, and mark each one done (\`[x]\`) when complete." \
@@ -38,7 +38,7 @@ if "$PLUGIN_ROOT/scripts/triage.sh"; then
     echo "[$MSG]" > "$INBOX"
   fi
 
-  echo "$(date '+%Y-%m-%d %H:%M') - Notification sent to superbot inbox" >> "$DIR/logs/heartbeat.log"
+  echo "$(date '+%Y-%m-%d %H:%M') - Notification sent to team-lead inbox" >> "$DIR/logs/heartbeat.log"
 else
   echo "$(date '+%Y-%m-%d %H:%M') - Triage: nothing to do" >> "$DIR/logs/heartbeat.log"
 fi

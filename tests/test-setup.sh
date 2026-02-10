@@ -53,7 +53,7 @@ echo '{"sessions":[]}' > "$MOCK_HOME/.superbot/sessions.json"
 touch "$MOCK_HOME/.superbot/logs/heartbeat.log"
 
 # Create inboxes
-echo '[]' > "$MOCK_HOME/.claude/teams/superbot/inboxes/superbot.json"
+echo '[]' > "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json"
 echo '[]' > "$MOCK_HOME/.claude/teams/superbot/inboxes/heartbeat.json"
 
 # ---------------------------------------------------------------------------
@@ -95,7 +95,7 @@ EXPECTED_FILES=(
   ".superbot/config.json"
   ".superbot/sessions.json"
   ".superbot/logs/heartbeat.log"
-  ".claude/teams/superbot/inboxes/superbot.json"
+  ".claude/teams/superbot/inboxes/team-lead.json"
   ".claude/teams/superbot/inboxes/heartbeat.json"
 )
 
@@ -188,7 +188,7 @@ fi
 echo ""
 echo "Checking inbox files..."
 
-for inbox in superbot heartbeat; do
+for inbox in team-lead heartbeat; do
   INBOX_FILE="$MOCK_HOME/.claude/teams/superbot/inboxes/$inbox.json"
   if [[ -f "$INBOX_FILE" ]]; then
     if jq -e 'type == "array"' "$INBOX_FILE" >/dev/null 2>&1; then

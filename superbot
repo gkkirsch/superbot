@@ -158,8 +158,8 @@ while true; do
     --dangerously-skip-permissions
     --plugin-dir "$PLUGIN_ROOT"
     --team-name superbot
-    --agent-name superbot
-    --agent-id superbot@superbot
+    --agent-name team-lead
+    --agent-id team-lead@superbot
   )
 
   # If resuming from a restart, add --resume with the session ID

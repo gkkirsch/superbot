@@ -8,7 +8,7 @@
 # With --project <slug>: uses project-worker-prompt.md, runs from project codeDir.
 # Without: uses slack-worker-prompt.md, runs from plugin root.
 #
-# Worker runs in background. When done: drops result into superbot's inbox.
+# Worker runs in background. When done: drops result into team-lead's inbox.
 #
 # Output: <name> <session_id>
 
@@ -18,7 +18,7 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG="$HOME/.superbot/config.json"
 DIR="$HOME/.superbot"
 SESSIONS="$DIR/sessions.json"
-INBOX="$HOME/.claude/teams/superbot/inboxes/superbot.json"
+INBOX="$HOME/.claude/teams/superbot/inboxes/team-lead.json"
 
 if [[ ! -f "$CONFIG" ]]; then
   echo "Error: config.json not found. Run setup first." >&2

@@ -135,7 +135,7 @@ scaffold_home() {
   echo '{"leadSessionId":"mock-lead","members":[]}' > "$MOCK_HOME/.claude/teams/superbot/config.json"
 
   # Inboxes
-  echo '[]' > "$MOCK_HOME/.claude/teams/superbot/inboxes/superbot.json"
+  echo '[]' > "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json"
   echo '[]' > "$MOCK_HOME/.claude/teams/superbot/inboxes/heartbeat.json"
 
   # Clear mock claude log
@@ -144,7 +144,7 @@ scaffold_home() {
 
 reset_state() {
   echo '{"sessions":[]}' > "$MOCK_HOME/.superbot/sessions.json"
-  echo '[]' > "$MOCK_HOME/.claude/teams/superbot/inboxes/superbot.json"
+  echo '[]' > "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json"
   echo '[]' > "$MOCK_HOME/.claude/teams/superbot/inboxes/heartbeat.json"
   > "$MOCK_CLAUDE_LOG"
   rm -f "$MOCK_HOME/.superbot/logs/"*.log
@@ -558,10 +558,10 @@ fi
 # Wait for background worker to complete
 sleep 3
 
-INBOX_LEN=$(jq 'length' "$MOCK_HOME/.claude/teams/superbot/inboxes/superbot.json" 2>/dev/null)
+INBOX_LEN=$(jq 'length' "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json" 2>/dev/null)
 if [[ "$INBOX_LEN" -gt 0 ]]; then
-  INBOX_READ=$(jq -r '.[0].read' "$MOCK_HOME/.claude/teams/superbot/inboxes/superbot.json" 2>/dev/null)
-  INBOX_FROM=$(jq -r '.[0].from' "$MOCK_HOME/.claude/teams/superbot/inboxes/superbot.json" 2>/dev/null)
+  INBOX_READ=$(jq -r '.[0].read' "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json" 2>/dev/null)
+  INBOX_FROM=$(jq -r '.[0].from' "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json" 2>/dev/null)
   if [[ "$INBOX_READ" == "false" && -n "$INBOX_FROM" ]]; then
     pass "worker result drops into inbox with correct format"
   else
@@ -573,7 +573,7 @@ fi
 
 # Test 5.5: Inbox message contains channel + thread_ts
 if [[ "$INBOX_LEN" -gt 0 ]]; then
-  INBOX_TEXT=$(jq -r '.[0].text' "$MOCK_HOME/.claude/teams/superbot/inboxes/superbot.json" 2>/dev/null)
+  INBOX_TEXT=$(jq -r '.[0].text' "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json" 2>/dev/null)
   if echo "$INBOX_TEXT" | grep -q "C123TEST" && echo "$INBOX_TEXT" | grep -q "1707000000.000002"; then
     pass "inbox message contains channel and thread_ts for Slack routing"
   else
@@ -721,9 +721,9 @@ reset_state
 "$PLUGIN_ROOT/scripts/spawn-worker.sh" "CSLACK001" "1707000001.000001" "Please help me debug this" 2>/dev/null || true
 sleep 3
 
-INBOX_LEN=$(jq 'length' "$MOCK_HOME/.claude/teams/superbot/inboxes/superbot.json" 2>/dev/null)
+INBOX_LEN=$(jq 'length' "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json" 2>/dev/null)
 if [[ "$INBOX_LEN" -gt 0 ]]; then
-  INBOX_TEXT=$(jq -r '.[-1].text' "$MOCK_HOME/.claude/teams/superbot/inboxes/superbot.json" 2>/dev/null)
+  INBOX_TEXT=$(jq -r '.[-1].text' "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json" 2>/dev/null)
   if echo "$INBOX_TEXT" | grep -q "CSLACK001" && echo "$INBOX_TEXT" | grep -q "1707000001.000001"; then
     pass "E2E: Slack → worker → inbox with correct channel/thread metadata"
   else
@@ -745,9 +745,9 @@ PROJ_EOF
 "$PLUGIN_ROOT/scripts/spawn-worker.sh" "CPROJ001" "1707000002.000001" "Fix the bug" --project e2eproj 2>/dev/null || true
 sleep 3
 
-INBOX_LEN=$(jq 'length' "$MOCK_HOME/.claude/teams/superbot/inboxes/superbot.json" 2>/dev/null)
+INBOX_LEN=$(jq 'length' "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json" 2>/dev/null)
 if [[ "$INBOX_LEN" -gt 0 ]]; then
-  INBOX_TEXT=$(jq -r '.[-1].text' "$MOCK_HOME/.claude/teams/superbot/inboxes/superbot.json" 2>/dev/null)
+  INBOX_TEXT=$(jq -r '.[-1].text' "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json" 2>/dev/null)
   if echo "$INBOX_TEXT" | grep -q "Project: e2eproj"; then
     pass "E2E: project worker inbox message includes Project label"
   else
