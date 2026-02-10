@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/superbotlogo.png" alt="Superbot" width="400" />
+</p>
+
 # Superbot Plugin for Claude Code
 
 A Claude Code plugin that adds superbot capabilities - heartbeat tasks, persistent memory, auto-populated daily notes, and identity continuity across sessions.

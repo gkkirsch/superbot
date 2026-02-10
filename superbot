@@ -152,14 +152,18 @@ while true; do
   ) &
   WATCHDOG_PID=$!
 
+  # Read leadSessionId from team config
+  LEAD_SESSION=$(jq -r '.leadSessionId' "$TEAM_DIR/config.json" 2>/dev/null)
+
   # Build claude args
   CLAUDE_ARGS=(
     --system-prompt "$CONTEXT"
-    --dangerously-skip-permissions
+    --permission-mode bypassPermissions
     --plugin-dir "$PLUGIN_ROOT"
     --team-name superbot
     --agent-name team-lead
     --agent-id team-lead@superbot
+    --session-id "$LEAD_SESSION"
   )
 
   # If resuming from a restart, add --resume with the session ID

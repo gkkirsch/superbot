@@ -146,7 +146,9 @@ else
       "agentId": "team-lead@superbot",
       "name": "team-lead",
       "agentType": "team-lead",
+      "model": "claude-opus-4-6",
       "joinedAt": $NOW_MS,
+      "tmuxPaneId": "",
       "cwd": "$HOME/dev",
       "subscriptions": []
     }
