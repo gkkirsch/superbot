@@ -155,7 +155,7 @@ while true; do
   # Build claude args
   CLAUDE_ARGS=(
     --system-prompt "$CONTEXT"
-    --permission-mode bypassPermissions
+    --dangerously-skip-permissions
     --plugin-dir "$PLUGIN_ROOT"
     --team-name superbot
     --agent-name team-lead
