@@ -163,12 +163,13 @@ while true; do
     --team-name superbot
     --agent-name team-lead
     --agent-id team-lead@superbot
-    --session-id "$LEAD_SESSION"
   )
 
-  # If resuming from a restart, add --resume with the session ID
+  # Use --session-id on fresh starts, --resume on restarts
   if [[ -n "$RESUME_SESSION" ]]; then
     CLAUDE_ARGS+=(--resume "$RESUME_SESSION")
+  else
+    CLAUDE_ARGS+=(--session-id "$LEAD_SESSION")
   fi
 
   # Run claude (foreground, gets full terminal)
