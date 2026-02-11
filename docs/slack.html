@@ -208,7 +208,7 @@ Superbot (router) receives inbox message
     |
     +-- Everything else?
         +-- spawn-worker.sh &lt;channel&gt; &lt;ts&gt; "&lt;message&gt;"
-        |   (or with --project &lt;slug&gt; for project work)
+        |   (or with --space &lt;slug&gt; for space work)
         +-- Worker runs in background (claude -p)
         +-- Result drops into superbot inbox
         +-- Superbot posts result to Slack via slack-send.sh</pre>
@@ -232,7 +232,7 @@ Superbot (router) receives inbox message
       <section class="reveal">
         <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Session Continuity</h2>
         <p class="text-stone leading-relaxed mb-4">Worker sessions are tracked in <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/sessions.json</code>. Each session is mapped to a Slack thread (channel + timestamp). When a thread reply arrives, <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">spawn-worker.sh</code> finds the existing session and resumes it with <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">claude -p --resume &lt;session-id&gt;</code> instead of starting fresh.</p>
-        <p class="text-stone leading-relaxed mb-6">The sessions registry records each worker's name, type (slack or project), Slack thread mapping, project association, status, and timestamps.</p>
+        <p class="text-stone leading-relaxed mb-6">The sessions registry records each worker's name, type (slack or space), Slack thread mapping, space association, status, and timestamps.</p>
       </section>
 
       <!-- Inbox Routing -->
@@ -294,8 +294,8 @@ Superbot (router) receives inbox message
         <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto"><code># Standard Slack worker
 spawn-worker.sh &lt;channel&gt; &lt;message_ts&gt; "&lt;message&gt;"
 
-# Project-specific worker
-spawn-worker.sh &lt;channel&gt; &lt;message_ts&gt; "&lt;message&gt;" --project &lt;slug&gt;</code></pre>
+# Space-specific worker
+spawn-worker.sh &lt;channel&gt; &lt;message_ts&gt; "&lt;message&gt;" --space &lt;slug&gt;</code></pre>
         <p class="text-stone leading-relaxed mb-6">Workers run in the background and don't block the main session. When done, they drop their result into superbot's inbox for posting to Slack.</p>
       </section>
 

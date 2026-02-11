@@ -56,7 +56,7 @@ fi
 # Create superbot directories
 mkdir -p "$DIR"
 mkdir -p "$DIR/daily"
-mkdir -p "$DIR/projects"
+mkdir -p "$DIR/spaces"
 mkdir -p "$DIR/prompts"
 mkdir -p "$DIR/logs"
 
@@ -109,10 +109,10 @@ if [[ -f "$OLD_SCHEDULE" ]]; then
   fi
 fi
 
-# Create projects directory from config
-PROJECTS_DIR=$(jq -r '.projectsDir // "~/projects"' "$DIR/config.json" | sed "s|^~|$HOME|")
-mkdir -p "$PROJECTS_DIR"
-echo "Projects directory: $PROJECTS_DIR"
+# Create spaces directory from config
+SPACES_DIR=$(jq -r '.spacesDir // "~/projects"' "$DIR/config.json" | sed "s|^~|$HOME|")
+mkdir -p "$SPACES_DIR"
+echo "Spaces directory: $SPACES_DIR"
 
 # Create sessions registry
 if [[ ! -f "$DIR/sessions.json" ]]; then
@@ -219,6 +219,37 @@ else
   npx skills add vercel-labs/agent-browser@agent-browser -g -a claude-code -y
   echo "Installed agent-browser skill"
 fi
+
+# --- Install superpowers skills (available to workers) ---
+
+echo ""
+echo "Installing superpowers skills..."
+
+SUPERPOWERS_SKILLS=(
+  brainstorming
+  dispatching-parallel-agents
+  executing-plans
+  finishing-a-development-branch
+  receiving-code-review
+  requesting-code-review
+  subagent-driven-development
+  systematic-debugging
+  test-driven-development
+  using-git-worktrees
+  using-superpowers
+  verification-before-completion
+  writing-plans
+  writing-skills
+)
+
+for skill in "${SUPERPOWERS_SKILLS[@]}"; do
+  if [[ -d "$HOME/.claude/skills/$skill" ]]; then
+    echo "  Skipped $skill (already exists)"
+  else
+    echo "  Installing $skill..."
+    npx skills add obra/superpowers-marketplace@"$skill" -g -a claude-code -y 2>/dev/null || echo "  Warning: could not install $skill"
+  fi
+done
 
 # --- Install Claude Code plugins ---
 

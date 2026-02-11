@@ -161,18 +161,23 @@
 
       <!-- What Is the Heartbeat? -->
       <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 fade-up delay-2">What Is the Heartbeat?</h2>
-      <p class="text-stone leading-relaxed mb-4 reveal">The heartbeat is a task queue checked every 30 minutes by a background worker. You add tasks, and the worker picks them up, processes them, and reports back &mdash; even while you're away.</p>
-      <p class="text-stone leading-relaxed mb-4 reveal">The heartbeat worker is a separate Claude agent (using Opus by default, configurable via <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">heartbeat.model</code> in config.json) that runs as a <strong class="text-parchment font-medium">teammate</strong> using team messaging. For project-tagged work orders, it notifies superbot, which spawns a project worker via <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">spawn-worker.sh --project</code>. If you're not online, messages wait in your inbox and appear next time you launch superbot.</p>
+      <p class="text-stone leading-relaxed mb-4 reveal">The heartbeat is your awareness loop and work queue, checked every 30 minutes by a background worker. It has two types of items: <strong class="text-parchment font-medium">recurring checks</strong> (permanent monitoring items scanned every cycle) and <strong class="text-parchment font-medium">work items</strong> (one-off tasks that get checked off when done).</p>
+      <p class="text-stone leading-relaxed mb-4 reveal">The heartbeat worker is a separate Claude agent (using Opus by default, configurable via <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">heartbeat.model</code> in config.json) that runs as a <strong class="text-parchment font-medium">teammate</strong> using team messaging. For space-tagged work orders, it notifies superbot, which spawns a space worker via <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">spawn-worker.sh --space</code>. If you're not online, messages wait in your inbox and appear next time you launch superbot.</p>
 
       <!-- Divider -->
       <div class="w-12 h-px bg-sand/30 my-12"></div>
 
       <!-- Adding Tasks -->
       <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 reveal">Adding Tasks</h2>
-      <p class="text-stone leading-relaxed mb-4 reveal">Just ask superbot to add a heartbeat task, or edit <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/HEARTBEAT.md</code> directly. Tasks are unchecked markdown checkboxes:</p>
-      <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto reveal">## Tasks
+      <p class="text-stone leading-relaxed mb-4 reveal">Just ask superbot to add a heartbeat item, or edit <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">~/.superbot/HEARTBEAT.md</code> directly. There are two sections:</p>
+      <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 mb-6 overflow-x-auto reveal">## Recurring Checks
+- Check on myspace [myspace] &mdash; any stale tasks? progress?
+- Scan for latest AI news &mdash; anything worth sharing?
+
+## Active
 - [ ] Run tests on main branch
 - [ ] Summarize my open PRs</pre>
+      <p class="text-stone leading-relaxed mb-4 reveal"><strong class="text-parchment font-medium">Recurring checks</strong> have no checkbox &mdash; they stay on the list permanently and are scanned every heartbeat cycle. <strong class="text-parchment font-medium">Work items</strong> use checkboxes and get marked <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">[x]</code> when completed.</p>
 
       <!-- Divider -->
       <div class="w-12 h-px bg-sand/30 my-12"></div>
@@ -199,7 +204,7 @@
         <li>Drops a kickoff message in the heartbeat worker's inbox with the pending tasks</li>
         <li>Spawns a Claude teammate with full tool access</li>
       </ol>
-      <p class="text-stone leading-relaxed mb-4 reveal">For project-tagged work orders (e.g. <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">- [ ] Work on summary [summary]</code>), the heartbeat worker notifies superbot instead of doing the work itself. Superbot then spawns a project worker via <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">spawn-worker.sh --project &lt;slug&gt;</code>.</p>
+      <p class="text-stone leading-relaxed mb-4 reveal">For space-tagged work orders (e.g. <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">- [ ] Work on summary [summary]</code>), the heartbeat worker notifies superbot instead of doing the work itself. Superbot then spawns a space worker via <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">spawn-worker.sh --space &lt;slug&gt;</code>.</p>
 
       <h3 class="font-heading text-xl font-light mb-4 mt-8 reveal">4. Worker processes tasks</h3>
       <p class="text-stone leading-relaxed mb-4 reveal">The worker follows instructions in <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">prompts/heartbeat.md</code>:</p>

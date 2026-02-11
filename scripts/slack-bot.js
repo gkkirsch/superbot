@@ -11,7 +11,7 @@ const PLUGIN_ROOT = path.resolve(__dirname, '..');
 const CONFIG_PATH = path.join(os.homedir(), '.superbot', 'config.json');
 const LOG_PATH = path.join(SUPERBOT_DIR, 'logs', 'slack-bot.log');
 const TEAM_DIR = path.join(os.homedir(), '.claude', 'teams', 'superbot');
-const SUPERBOT_INBOX = path.join(TEAM_DIR, 'inboxes', 'superbot.json');
+const SUPERBOT_INBOX = path.join(TEAM_DIR, 'inboxes', 'team-lead.json');
 
 // ---------------------------------------------------------------------------
 // Logging

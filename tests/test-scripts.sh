@@ -13,8 +13,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 RESET='\033[0m'
 
-pass() { ((PASS++)); echo -e "  ${GREEN}PASS${RESET} $1"; }
-fail() { ((FAIL++)); echo -e "  ${RED}FAIL${RESET} $1"; }
+pass() { PASS=$((PASS + 1)); echo -e "  ${GREEN}PASS${RESET} $1"; }
+fail() { FAIL=$((FAIL + 1)); echo -e "  ${RED}FAIL${RESET} $1"; }
 skip() { echo -e "  ${YELLOW}SKIP${RESET} $1"; }
 
 echo "=== Script Validation Tests ==="
@@ -79,7 +79,7 @@ SCRIPTS_WITH_CONFIG=(
   "install-heartbeat.sh"
   "install-slack.sh"
   "daily-observer.sh"
-  "create-project.sh"
+  "create-space.sh"
 )
 
 for name in "${SCRIPTS_WITH_CONFIG[@]}"; do
@@ -155,22 +155,22 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 6. create-project.sh usage message
+# 6. create-space.sh usage message
 # ---------------------------------------------------------------------------
 echo ""
-echo "Testing create-project.sh..."
+echo "Testing create-space.sh..."
 
-CREATE_PROJECT="$PLUGIN_ROOT/scripts/create-project.sh"
-if [[ -f "$CREATE_PROJECT" && -x "$CREATE_PROJECT" ]]; then
+CREATE_SPACE="$PLUGIN_ROOT/scripts/create-space.sh"
+if [[ -f "$CREATE_SPACE" && -x "$CREATE_SPACE" ]]; then
   # Running with no args should fail with usage
-  OUTPUT=$("$CREATE_PROJECT" 2>&1 || true)
+  OUTPUT=$("$CREATE_SPACE" 2>&1 || true)
   if echo "$OUTPUT" | grep -qi "usage"; then
-    pass "create-project.sh shows usage when called with no args"
+    pass "create-space.sh shows usage when called with no args"
   else
-    fail "create-project.sh does not show usage on empty args"
+    fail "create-space.sh does not show usage on empty args"
   fi
 else
-  fail "create-project.sh not found or not executable"
+  fail "create-space.sh not found or not executable"
 fi
 
 # ---------------------------------------------------------------------------

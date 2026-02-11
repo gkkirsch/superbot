@@ -12,9 +12,13 @@ const CONFIG_PATH = path.join(os.homedir(), '.superbot', 'config.json');
 const TEAM_DIR = path.join(os.homedir(), '.claude', 'teams', 'superbot');
 const SKILLS_DIR = path.join(os.homedir(), '.claude', 'skills');
 const TASKS_DIR = path.join(os.homedir(), '.claude', 'tasks');
+const SPACES_DIR = path.join(os.homedir(), '.superbot', 'spaces');
 
 const PORT = 3274;
 const app = express();
+
+// Path to Spaces React app build output
+const SPACES_UI_DIST = path.join(PLUGIN_ROOT, 'spaces-ui', 'dist');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -63,6 +67,72 @@ function redactTokens(obj) {
   return obj;
 }
 
+function sanitizeSlug(slug) {
+  return slug.replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+// Recursively count .md files in a directory
+function countDocsRecursive(dir) {
+  let count = 0;
+  try {
+    if (!fs.existsSync(dir)) return 0;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        count += countDocsRecursive(full);
+      } else if (entry.name.endsWith('.md')) {
+        count++;
+      }
+    }
+  } catch (_) {}
+  return count;
+}
+
+// Recursively list .md files in a directory with metadata
+function listDocsRecursive(dir, baseDir) {
+  let docs = [];
+  try {
+    if (!fs.existsSync(dir)) return docs;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        docs = docs.concat(listDocsRecursive(full, baseDir));
+      } else if (entry.name.endsWith('.md')) {
+        const stat = fs.statSync(full);
+        docs.push({
+          name: entry.name,
+          relativePath: path.relative(baseDir, full),
+          size: stat.size,
+          modified: stat.mtime.toISOString(),
+        });
+      }
+    }
+  } catch (_) {}
+  return docs;
+}
+
+// Find the latest mtime across all files in a directory (recursive)
+function latestMtime(dir) {
+  let latest = null;
+  try {
+    if (!fs.existsSync(dir)) return latest;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        const sub = latestMtime(full);
+        if (sub && (!latest || sub > latest)) latest = sub;
+      } else {
+        const stat = fs.statSync(full);
+        if (!latest || stat.mtime > latest) latest = stat.mtime;
+      }
+    }
+  } catch (_) {}
+  return latest;
+}
+
 // Allowlisted log file names
 const ALLOWED_LOGS = ['heartbeat.log', 'slack-bot.log', 'scheduler.log', 'observer.log', 'worker.log'];
 
@@ -70,10 +140,21 @@ const ALLOWED_LOGS = ['heartbeat.log', 'slack-bot.log', 'scheduler.log', 'observ
 // Routes
 // ---------------------------------------------------------------------------
 
-// Serve dashboard HTML
+// Serve existing dashboard HTML at /
 app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
+
+// Serve Spaces React app at /spaces and /spaces/*
+if (fs.existsSync(SPACES_UI_DIST)) {
+  app.use('/spaces', express.static(SPACES_UI_DIST, { redirect: false }));
+  app.get('/spaces', (_req, res) => {
+    res.sendFile(path.join(SPACES_UI_DIST, 'index.html'));
+  });
+  app.get('/spaces/{*path}', (_req, res) => {
+    res.sendFile(path.join(SPACES_UI_DIST, 'index.html'));
+  });
+}
 
 // Context files
 app.get('/api/identity', (_req, res) => res.json(readFileOr(path.join(SUPERBOT_DIR, 'IDENTITY.md'))));
@@ -287,9 +368,230 @@ app.get('/api/status', (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Spaces
+// ---------------------------------------------------------------------------
+
+// 1. List all spaces with summary stats
+app.get('/api/spaces', (_req, res) => {
+  try {
+    if (!fs.existsSync(SPACES_DIR)) return res.json({ spaces: [] });
+    const dirs = fs.readdirSync(SPACES_DIR, { withFileTypes: true })
+      .filter(e => e.isDirectory());
+    const spaces = dirs.map(d => {
+      const spaceDir = path.join(SPACES_DIR, d.name);
+      const spaceJson = readJsonOr(path.join(spaceDir, 'space.json'), {});
+
+      // Count tasks by status
+      const tasksDir = path.join(spaceDir, 'tasks');
+      const taskCounts = { pending: 0, in_progress: 0, completed: 0, total: 0 };
+      try {
+        if (fs.existsSync(tasksDir)) {
+          const taskFiles = fs.readdirSync(tasksDir)
+            .filter(f => f.endsWith('.json') && f !== '.highwatermark');
+          for (const f of taskFiles) {
+            const task = readJsonOr(path.join(tasksDir, f), {});
+            taskCounts.total++;
+            if (task.status === 'pending') taskCounts.pending++;
+            else if (task.status === 'in_progress') taskCounts.in_progress++;
+            else if (task.status === 'completed') taskCounts.completed++;
+          }
+        }
+      } catch (_) {}
+
+      // Count docs recursively
+      const docsDir = path.join(spaceDir, 'docs');
+      const docCount = countDocsRecursive(docsDir);
+
+      // Find latest mtime across the entire space directory
+      const lastMtime = latestMtime(spaceDir);
+      const lastUpdated = lastMtime ? lastMtime.toISOString() : null;
+
+      return { ...spaceJson, taskCounts, docCount, lastUpdated };
+    });
+    res.json({ spaces });
+  } catch (_) {
+    res.json({ spaces: [] });
+  }
+});
+
+// 2. Full space detail
+app.get('/api/spaces/:slug', (req, res) => {
+  const slug = sanitizeSlug(req.params.slug);
+  if (!slug || slug !== req.params.slug) {
+    return res.status(400).json({ error: 'Invalid slug' });
+  }
+  const spaceDir = path.join(SPACES_DIR, slug);
+  if (!fs.existsSync(spaceDir)) {
+    return res.status(404).json({ error: 'Space not found' });
+  }
+  const space = readJsonOr(path.join(spaceDir, 'space.json'), {});
+  const overview = readFileOr(path.join(spaceDir, 'OVERVIEW.md'));
+  res.json({ space, overview });
+});
+
+// 3. All tasks for a space
+app.get('/api/spaces/:slug/tasks', (req, res) => {
+  const slug = sanitizeSlug(req.params.slug);
+  if (!slug || slug !== req.params.slug) {
+    return res.status(400).json({ error: 'Invalid slug' });
+  }
+  const tasksDir = path.join(SPACES_DIR, slug, 'tasks');
+  try {
+    if (!fs.existsSync(tasksDir)) return res.json({ tasks: [] });
+    const files = fs.readdirSync(tasksDir)
+      .filter(f => f.endsWith('.json') && f !== '.highwatermark');
+    const priorityRank = { critical: 0, high: 1, medium: 2, low: 3 };
+    const tasks = files
+      .map(f => readJsonOr(path.join(tasksDir, f), {}))
+      .sort((a, b) => {
+        const pa = priorityRank[a.priority] ?? 4;
+        const pb = priorityRank[b.priority] ?? 4;
+        if (pa !== pb) return pa - pb;
+        return (a.id || 0) - (b.id || 0);
+      });
+    res.json({ tasks });
+  } catch (_) {
+    res.json({ tasks: [] });
+  }
+});
+
+// 4. List all doc files for a space
+app.get('/api/spaces/:slug/docs', (req, res) => {
+  const slug = sanitizeSlug(req.params.slug);
+  if (!slug || slug !== req.params.slug) {
+    return res.status(400).json({ error: 'Invalid slug' });
+  }
+  const docsDir = path.join(SPACES_DIR, slug, 'docs');
+  const docs = listDocsRecursive(docsDir, docsDir);
+  res.json({ docs });
+});
+
+// 5. Content of a specific doc
+app.get(/^\/api\/spaces\/([^/]+)\/docs\/(.+)$/, (req, res) => {
+  const slug = sanitizeSlug(req.params[0]);
+  const slugParam = req.params[0];
+  if (!slug || slug !== slugParam) {
+    return res.status(400).json({ error: 'Invalid slug' });
+  }
+  const relativePath = req.params[1];
+  if (!relativePath || relativePath.includes('..')) {
+    return res.status(400).json({ error: 'Invalid path' });
+  }
+  const docsDir = path.join(SPACES_DIR, slug, 'docs');
+  const fullPath = path.join(docsDir, relativePath);
+  // Ensure resolved path stays within docsDir
+  if (!path.resolve(fullPath).startsWith(path.resolve(docsDir))) {
+    return res.status(400).json({ error: 'Invalid path' });
+  }
+  const result = readFileOr(fullPath);
+  res.json({ content: result.content, exists: result.exists, path: relativePath });
+});
+
+// 6. Shortcut for OVERVIEW.md
+app.get('/api/spaces/:slug/overview', (req, res) => {
+  const slug = sanitizeSlug(req.params.slug);
+  if (!slug || slug !== req.params.slug) {
+    return res.status(400).json({ error: 'Invalid slug' });
+  }
+  res.json(readFileOr(path.join(SPACES_DIR, slug, 'OVERVIEW.md')));
+});
+
+// ---------------------------------------------------------------------------
+// Prompts API
+// ---------------------------------------------------------------------------
+
+app.get('/api/prompts', (_req, res) => {
+  const prompts = [
+    { id: 'team-lead', name: 'Team Lead (System)', file: path.join(PLUGIN_ROOT, 'templates', 'SYSTEM.md') },
+    { id: 'worker', name: 'Worker', file: path.join(PLUGIN_ROOT, 'scripts', 'worker-prompt.md') },
+    { id: 'space-worker', name: 'Space Worker', file: path.join(PLUGIN_ROOT, 'scripts', 'space-worker-prompt.md') },
+    { id: 'triage', name: 'Triage (Heartbeat)', file: path.join(PLUGIN_ROOT, 'scripts', 'triage-prompt.md') },
+    { id: 'observer', name: 'Daily Observer', file: path.join(PLUGIN_ROOT, 'scripts', 'observer-prompt.md') },
+    { id: 'slack-worker', name: 'Slack Worker', file: path.join(PLUGIN_ROOT, 'scripts', 'slack-worker-prompt.md') },
+  ];
+
+  const result = prompts.map((p) => {
+    const data = readFileOr(p.file);
+    return {
+      id: p.id,
+      name: p.name,
+      exists: data.exists,
+      size: data.exists ? Buffer.byteLength(data.content, 'utf8') : 0,
+      lines: data.exists ? data.content.split('\n').length : 0,
+    };
+  });
+
+  res.json({ prompts: result });
+});
+
+app.get('/api/prompts/:id', (req, res) => {
+  const promptMap = {
+    'team-lead': path.join(PLUGIN_ROOT, 'templates', 'SYSTEM.md'),
+    'worker': path.join(PLUGIN_ROOT, 'scripts', 'worker-prompt.md'),
+    'space-worker': path.join(PLUGIN_ROOT, 'scripts', 'space-worker-prompt.md'),
+    'triage': path.join(PLUGIN_ROOT, 'scripts', 'triage-prompt.md'),
+    'observer': path.join(PLUGIN_ROOT, 'scripts', 'observer-prompt.md'),
+    'slack-worker': path.join(PLUGIN_ROOT, 'scripts', 'slack-worker-prompt.md'),
+  };
+
+  const filePath = promptMap[req.params.id];
+  if (!filePath) {
+    return res.status(404).json({ error: 'Prompt not found' });
+  }
+
+  const data = readFileOr(filePath);
+  res.json({ id: req.params.id, ...data });
+});
+
+// ---------------------------------------------------------------------------
+// Docs API (extract main content from static HTML docs)
+// ---------------------------------------------------------------------------
+
+const DOCS_DIR = path.join(PLUGIN_ROOT, 'docs');
+
+const docsPages = [
+  { slug: 'getting-started', file: 'getting-started.html', title: 'Getting Started' },
+  { slug: 'commands', file: 'commands.html', title: 'Commands' },
+  { slug: 'memory', file: 'memory.html', title: 'Memory' },
+  { slug: 'heartbeat', file: 'heartbeat.html', title: 'Heartbeat' },
+  { slug: 'scheduler', file: 'scheduler.html', title: 'Scheduler' },
+  { slug: 'slack', file: 'slack.html', title: 'Slack' },
+  { slug: 'skills', file: 'skills.html', title: 'Skills' },
+  { slug: 'architecture', file: 'architecture.html', title: 'Architecture' },
+  { slug: 'prompt', file: 'prompt.html', title: 'System Prompt' },
+  { slug: 'files', file: 'files.html', title: 'File Reference' },
+];
+
+app.get('/api/docs/:slug', (req, res) => {
+  const page = docsPages.find((p) => p.slug === req.params.slug);
+  if (!page) {
+    return res.status(404).json({ content: '', exists: false });
+  }
+
+  const filePath = path.join(DOCS_DIR, page.file);
+  if (!fs.existsSync(filePath)) {
+    return res.json({ content: '', exists: false });
+  }
+
+  const html = fs.readFileSync(filePath, 'utf8');
+
+  // Extract content between <main> tags
+  const mainMatch = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+  if (mainMatch) {
+    res.json({ content: mainMatch[1].trim(), exists: true });
+  } else {
+    // Fallback: extract body content
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    res.json({ content: bodyMatch ? bodyMatch[1].trim() : '', exists: !!bodyMatch });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Start
 // ---------------------------------------------------------------------------
 
 app.listen(PORT, () => {
   console.log(`Superbot Dashboard running at http://localhost:${PORT}`);
+  console.log(`  Dashboard:  http://localhost:${PORT}/`);
+  console.log(`  Spaces UI:  http://localhost:${PORT}/spaces`);
 });

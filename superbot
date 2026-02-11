@@ -23,6 +23,7 @@ assemble_context() {
     IS_GIT="true"
   fi
   local CURRENT_DATE="$(date '+%Y-%m-%d')"
+  local CURRENT_TIME="$(date '+%A %B %-d, %-I:%M %p')"
   local OS_VERSION="$(uname -s) $(uname -r)"
   local PLATFORM="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
@@ -34,7 +35,7 @@ assemble_context() {
   CONTEXT+="- Is a git repository: $IS_GIT"$'\n'
   CONTEXT+="- Platform: $PLATFORM"$'\n'
   CONTEXT+="- OS Version: $OS_VERSION"$'\n'
-  CONTEXT+="- Current date: $CURRENT_DATE"$'\n'
+  CONTEXT+="- Current date and time: $CURRENT_TIME ($CURRENT_DATE)"$'\n'
   CONTEXT+="- Knowledge cutoff: May 2025"$'\n'
   CONTEXT+="- Model family: Claude 4.5/4.6 (Opus 4.6: claude-opus-4-6, Sonnet 4.5: claude-sonnet-4-5-20250929, Haiku 4.5: claude-haiku-4-5-20251001)"$'\n'
   CONTEXT+=$'\n---\n\n'
@@ -76,17 +77,17 @@ assemble_context() {
     CONTEXT+=$'\n\n---\n\n'
   fi
 
-  # Project dashboard
-  if ls "$DIR/projects"/*/project.json &>/dev/null; then
-    CONTEXT+="## Projects"$'\n'
-    for proj_json in "$DIR/projects"/*/project.json; do
-      proj_name=$(jq -r '.name' "$proj_json")
-      proj_status=$(jq -r '.status' "$proj_json")
-      proj_priority=$(jq -r '.priority // "medium"' "$proj_json")
-      proj_dir=$(dirname "$proj_json")
-      pending=$(grep -rl '"status":"pending"' "$proj_dir/tasks/" 2>/dev/null | wc -l | tr -d ' ')
-      in_progress=$(grep -rl '"status":"in_progress"' "$proj_dir/tasks/" 2>/dev/null | wc -l | tr -d ' ')
-      CONTEXT+="- **$proj_name** [$proj_status, $proj_priority] — ${pending} pending, ${in_progress} in progress"$'\n'
+  # Spaces dashboard
+  if ls "$DIR/spaces"/*/space.json &>/dev/null; then
+    CONTEXT+="## Spaces"$'\n'
+    for space_json in "$DIR/spaces"/*/space.json; do
+      space_name=$(jq -r '.name' "$space_json")
+      space_status=$(jq -r '.status' "$space_json")
+      space_priority=$(jq -r '.priority // "medium"' "$space_json")
+      space_dir=$(dirname "$space_json")
+      pending=$(grep -rl '"status":"pending"' "$space_dir/tasks/" 2>/dev/null | wc -l | tr -d ' ')
+      in_progress=$(grep -rl '"status":"in_progress"' "$space_dir/tasks/" 2>/dev/null | wc -l | tr -d ' ')
+      CONTEXT+="- **$space_name** [$space_status, $space_priority] — ${pending} pending, ${in_progress} in progress"$'\n'
     done
     CONTEXT+=$'\n\n---\n\n'
   fi
@@ -116,15 +117,15 @@ restart_daemons() {
   done
 }
 
-# --- Find the most recent session ID for this project ---
+# --- Find the most recent session ID for this workspace ---
 find_session_id() {
   # Claude stores sessions as .jsonl files in ~/.claude/projects/<encoded-cwd>/
   local CWD_ENCODED
   CWD_ENCODED=$(pwd | sed 's|/|-|g')
-  local PROJECT_DIR="$HOME/.claude/projects/$CWD_ENCODED"
-  if [[ -d "$PROJECT_DIR" ]]; then
+  local SESSION_DIR="$HOME/.claude/projects/$CWD_ENCODED"
+  if [[ -d "$SESSION_DIR" ]]; then
     local LATEST
-    LATEST=$(ls -t "$PROJECT_DIR"/*.jsonl 2>/dev/null | head -1)
+    LATEST=$(ls -t "$SESSION_DIR"/*.jsonl 2>/dev/null | head -1)
     if [[ -n "$LATEST" ]]; then
       basename "$LATEST" .jsonl
     fi

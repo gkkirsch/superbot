@@ -14,8 +14,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 RESET='\033[0m'
 
-pass() { ((PASS++)); echo -e "  ${GREEN}PASS${RESET} $1"; }
-fail() { ((FAIL++)); echo -e "  ${RED}FAIL${RESET} $1"; }
+pass() { PASS=$((PASS + 1)); echo -e "  ${GREEN}PASS${RESET} $1"; }
+fail() { FAIL=$((FAIL + 1)); echo -e "  ${RED}FAIL${RESET} $1"; }
 
 # ---------------------------------------------------------------------------
 # Setup: Mock HOME and mock claude binary
@@ -107,7 +107,7 @@ chmod +x "$MOCK_BIN/uuidgen"
 scaffold_home() {
   mkdir -p "$MOCK_HOME/.superbot/logs"
   mkdir -p "$MOCK_HOME/.superbot/daily"
-  mkdir -p "$MOCK_HOME/.superbot/projects"
+  mkdir -p "$MOCK_HOME/.superbot/spaces"
   mkdir -p "$MOCK_HOME/.superbot/prompts"
   mkdir -p "$MOCK_HOME/.claude/teams/superbot/inboxes"
   mkdir -p "$MOCK_HOME/.claude/projects/mock-project"
@@ -533,25 +533,25 @@ else
   fail "spawn-worker should resume, not create new session (got $SESSION_COUNT)"
 fi
 
-# Test 5.3: --project flag resolves codeDir, sets type to "project"
+# Test 5.3: --space flag resolves codeDir, sets type to "space"
 reset_state
-# Create a mock project
-mkdir -p "$MOCK_HOME/.superbot/projects/testproj/tasks"
-mkdir -p "$MOCK_HOME/.superbot/projects/testproj/docs"
+# Create a mock space
+mkdir -p "$MOCK_HOME/.superbot/spaces/testproj/tasks"
+mkdir -p "$MOCK_HOME/.superbot/spaces/testproj/docs"
 MOCK_CODE_DIR=$(mktemp -d)
-cat > "$MOCK_HOME/.superbot/projects/testproj/project.json" << PROJ_EOF
-{"name":"Test Project","slug":"testproj","codeDir":"$MOCK_CODE_DIR","status":"active","createdAt":"2026-02-09","updatedAt":"2026-02-09"}
+cat > "$MOCK_HOME/.superbot/spaces/testproj/space.json" << PROJ_EOF
+{"name":"Test Space","slug":"testproj","codeDir":"$MOCK_CODE_DIR","status":"active","createdAt":"2026-02-09","updatedAt":"2026-02-09"}
 PROJ_EOF
 
-SPAWN_OUTPUT=$("$PLUGIN_ROOT/scripts/spawn-worker.sh" "C123TEST" "1707000000.000002" "Work on project" --project testproj 2>/dev/null || true)
+SPAWN_OUTPUT=$("$PLUGIN_ROOT/scripts/spawn-worker.sh" "C123TEST" "1707000000.000002" "Work on space" --space testproj 2>/dev/null || true)
 sleep 1
 
 SESSION_TYPE=$(jq -r '.sessions[0].type' "$MOCK_HOME/.superbot/sessions.json" 2>/dev/null)
-SESSION_PROJ=$(jq -r '.sessions[0].project' "$MOCK_HOME/.superbot/sessions.json" 2>/dev/null)
-if [[ "$SESSION_TYPE" == "project" && "$SESSION_PROJ" == "testproj" ]]; then
-  pass "spawn-worker with --project sets type=project and project=slug"
+SESSION_PROJ=$(jq -r '.sessions[0].space' "$MOCK_HOME/.superbot/sessions.json" 2>/dev/null)
+if [[ "$SESSION_TYPE" == "space" && "$SESSION_PROJ" == "testproj" ]]; then
+  pass "spawn-worker with --space sets type=space and space=slug"
 else
-  fail "spawn-worker --project: type=$SESSION_TYPE, project=$SESSION_PROJ"
+  fail "spawn-worker --space: type=$SESSION_TYPE, space=$SESSION_PROJ"
 fi
 
 # Test 5.4: Worker result drops into inbox
@@ -588,37 +588,37 @@ rm -rf "$MOCK_CODE_DIR"
 echo ""
 
 # ===========================================================================
-# Section 6: Project Documentation System (5 tests)
+# Section 6: Space Documentation System (5 tests)
 # ===========================================================================
-echo "--- Section 6: Project Documentation System ---"
+echo "--- Section 6: Space Documentation System ---"
 echo ""
 
-# Test 6.1: create-project.sh creates full directory structure
+# Test 6.1: create-space.sh creates full directory structure
 reset_state
 MOCK_CODE_DIR2=$(mktemp -d)
-PROJECT_OUTPUT=$("$PLUGIN_ROOT/scripts/create-project.sh" "simtest" "Sim Test Project" "$MOCK_CODE_DIR2" "Test project for simulation" 2>/dev/null || true)
+SPACE_OUTPUT=$("$PLUGIN_ROOT/scripts/create-space.sh" "simtest" "Sim Test Space" "$MOCK_CODE_DIR2" "Test space for simulation" 2>/dev/null || true)
 
-PROJ_DIR="$MOCK_HOME/.superbot/projects/simtest"
-if [[ -f "$PROJ_DIR/README.md" && -f "$PROJ_DIR/PLAN.md" && -f "$PROJ_DIR/project.json" && -d "$PROJ_DIR/tasks" && -d "$PROJ_DIR/docs" ]]; then
-  pass "create-project.sh creates full directory structure"
+PROJ_DIR="$MOCK_HOME/.superbot/spaces/simtest"
+if [[ -f "$PROJ_DIR/OVERVIEW.md" && -f "$PROJ_DIR/space.json" && -d "$PROJ_DIR/tasks" && -d "$PROJ_DIR/docs" ]]; then
+  pass "create-space.sh creates full directory structure"
 else
-  fail "create-project.sh missing files/dirs in $PROJ_DIR"
+  fail "create-space.sh missing files/dirs in $PROJ_DIR"
 fi
 
-# Test 6.2: project.json has correct schema
-if [[ -f "$PROJ_DIR/project.json" ]]; then
-  PROJ_NAME=$(jq -r '.name' "$PROJ_DIR/project.json" 2>/dev/null)
-  PROJ_SLUG=$(jq -r '.slug' "$PROJ_DIR/project.json" 2>/dev/null)
-  PROJ_CODE=$(jq -r '.codeDir' "$PROJ_DIR/project.json" 2>/dev/null)
-  PROJ_STATUS=$(jq -r '.status' "$PROJ_DIR/project.json" 2>/dev/null)
-  PROJ_CREATED=$(jq -r '.createdAt' "$PROJ_DIR/project.json" 2>/dev/null)
-  if [[ "$PROJ_NAME" == "Sim Test Project" && "$PROJ_SLUG" == "simtest" && "$PROJ_CODE" == "$MOCK_CODE_DIR2" && "$PROJ_STATUS" == "active" && -n "$PROJ_CREATED" && "$PROJ_CREATED" != "null" ]]; then
-    pass "project.json has correct schema and values"
+# Test 6.2: space.json has correct schema
+if [[ -f "$PROJ_DIR/space.json" ]]; then
+  PROJ_NAME=$(jq -r '.name' "$PROJ_DIR/space.json" 2>/dev/null)
+  PROJ_SLUG=$(jq -r '.slug' "$PROJ_DIR/space.json" 2>/dev/null)
+  PROJ_CODE=$(jq -r '.codeDir' "$PROJ_DIR/space.json" 2>/dev/null)
+  PROJ_STATUS=$(jq -r '.status' "$PROJ_DIR/space.json" 2>/dev/null)
+  PROJ_CREATED=$(jq -r '.createdAt' "$PROJ_DIR/space.json" 2>/dev/null)
+  if [[ "$PROJ_NAME" == "Sim Test Space" && "$PROJ_SLUG" == "simtest" && "$PROJ_CODE" == "$MOCK_CODE_DIR2" && "$PROJ_STATUS" == "active" && -n "$PROJ_CREATED" && "$PROJ_CREATED" != "null" ]]; then
+    pass "space.json has correct schema and values"
   else
-    fail "project.json schema issue: name=$PROJ_NAME slug=$PROJ_SLUG codeDir=$PROJ_CODE status=$PROJ_STATUS"
+    fail "space.json schema issue: name=$PROJ_NAME slug=$PROJ_SLUG codeDir=$PROJ_CODE status=$PROJ_STATUS"
   fi
 else
-  fail "project.json not created"
+  fail "space.json not created"
 fi
 
 # Test 6.3: .highwatermark initialized to 1
@@ -633,25 +633,25 @@ else
   fail ".highwatermark not created"
 fi
 
-# Test 6.4: Template substitution in project-worker-prompt.md
-if [[ -f "$PLUGIN_ROOT/scripts/project-worker-prompt.md" ]]; then
-  SUBST_OUTPUT=$(sed "s|{{PROJECT}}|simtest|g; s|{{CODE_DIR}}|$MOCK_CODE_DIR2|g" "$PLUGIN_ROOT/scripts/project-worker-prompt.md")
+# Test 6.4: Template substitution in space-worker-prompt.md
+if [[ -f "$PLUGIN_ROOT/scripts/space-worker-prompt.md" ]]; then
+  SUBST_OUTPUT=$(sed "s|{{SPACE}}|simtest|g; s|{{CODE_DIR}}|$MOCK_CODE_DIR2|g" "$PLUGIN_ROOT/scripts/space-worker-prompt.md")
   if echo "$SUBST_OUTPUT" | grep -q "simtest" && echo "$SUBST_OUTPUT" | grep -q "$MOCK_CODE_DIR2"; then
-    if echo "$SUBST_OUTPUT" | grep -q "{{PROJECT}}\|{{CODE_DIR}}"; then
+    if echo "$SUBST_OUTPUT" | grep -q "{{SPACE}}\|{{CODE_DIR}}"; then
       fail "template substitution left unreplaced placeholders"
     else
-      pass "template substitution replaces {{PROJECT}} and {{CODE_DIR}}"
+      pass "template substitution replaces {{SPACE}} and {{CODE_DIR}}"
     fi
   else
     fail "template substitution failed"
   fi
 else
-  fail "project-worker-prompt.md not found"
+  fail "space-worker-prompt.md not found"
 fi
 
 # Test 6.5: Worker prompt documents full docs tree and task format
-if [[ -f "$PLUGIN_ROOT/scripts/project-worker-prompt.md" ]]; then
-  PROMPT_CONTENT=$(cat "$PLUGIN_ROOT/scripts/project-worker-prompt.md")
+if [[ -f "$PLUGIN_ROOT/scripts/space-worker-prompt.md" ]]; then
+  PROMPT_CONTENT=$(cat "$PLUGIN_ROOT/scripts/space-worker-prompt.md")
   HAS_PLANS=$(echo "$PROMPT_CONTENT" | grep -c "docs/plans/" || true)
   HAS_RESEARCH=$(echo "$PROMPT_CONTENT" | grep -c "docs/research/" || true)
   HAS_DESIGN=$(echo "$PROMPT_CONTENT" | grep -c "docs/design/" || true)
@@ -663,7 +663,7 @@ if [[ -f "$PLUGIN_ROOT/scripts/project-worker-prompt.md" ]]; then
     fail "worker prompt missing docs tree ($HAS_PLANS/$HAS_RESEARCH/$HAS_DESIGN) or task format ($HAS_TASK_JSON) or decision tree ($HAS_DECISION)"
   fi
 else
-  fail "project-worker-prompt.md not found"
+  fail "space-worker-prompt.md not found"
 fi
 
 rm -rf "$MOCK_CODE_DIR2"
@@ -689,20 +689,20 @@ else
   fail "SYSTEM.md not found"
 fi
 
-# Test 7.2: SYSTEM.md documents --project flag for project work
-if grep -q "\-\-project" "$SYSTEM_MD"; then
-  pass "SYSTEM.md documents --project flag"
+# Test 7.2: SYSTEM.md documents --space flag for space work
+if grep -q "\-\-space" "$SYSTEM_MD"; then
+  pass "SYSTEM.md documents --space flag"
 else
-  fail "SYSTEM.md missing --project flag documentation"
+  fail "SYSTEM.md missing --space flag documentation"
 fi
 
-# Test 7.3: worker-prompt.md classifies [project-slug] tagged items
+# Test 7.3: worker-prompt.md classifies [space-slug] tagged items
 WORKER_PROMPT="$PLUGIN_ROOT/scripts/worker-prompt.md"
 if [[ -f "$WORKER_PROMPT" ]]; then
-  if grep -q "project-slug\|project.*tag\|\[.*slug\]" "$WORKER_PROMPT"; then
-    pass "worker-prompt.md classifies project-tagged items"
+  if grep -q "space-slug\|space.*tag\|\[.*slug\]" "$WORKER_PROMPT"; then
+    pass "worker-prompt.md classifies space-tagged items"
   else
-    fail "worker-prompt.md missing project tag classification"
+    fail "worker-prompt.md missing space tag classification"
   fi
 else
   fail "worker-prompt.md not found"
@@ -733,28 +733,28 @@ else
   fail "E2E: Slack worker did not produce inbox result"
 fi
 
-# Test 8.2: Project worker → inbox with Project label
+# Test 8.2: Space worker → inbox with Space label
 reset_state
 MOCK_CODE_DIR3=$(mktemp -d)
-mkdir -p "$MOCK_HOME/.superbot/projects/e2eproj/tasks"
-mkdir -p "$MOCK_HOME/.superbot/projects/e2eproj/docs"
-cat > "$MOCK_HOME/.superbot/projects/e2eproj/project.json" << PROJ_EOF
-{"name":"E2E Project","slug":"e2eproj","codeDir":"$MOCK_CODE_DIR3","status":"active","createdAt":"2026-02-09","updatedAt":"2026-02-09"}
+mkdir -p "$MOCK_HOME/.superbot/spaces/e2eproj/tasks"
+mkdir -p "$MOCK_HOME/.superbot/spaces/e2eproj/docs"
+cat > "$MOCK_HOME/.superbot/spaces/e2eproj/space.json" << PROJ_EOF
+{"name":"E2E Space","slug":"e2eproj","codeDir":"$MOCK_CODE_DIR3","status":"active","createdAt":"2026-02-09","updatedAt":"2026-02-09"}
 PROJ_EOF
 
-"$PLUGIN_ROOT/scripts/spawn-worker.sh" "CPROJ001" "1707000002.000001" "Fix the bug" --project e2eproj 2>/dev/null || true
+"$PLUGIN_ROOT/scripts/spawn-worker.sh" "CPROJ001" "1707000002.000001" "Fix the bug" --space e2eproj 2>/dev/null || true
 sleep 3
 
 INBOX_LEN=$(jq 'length' "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json" 2>/dev/null)
 if [[ "$INBOX_LEN" -gt 0 ]]; then
   INBOX_TEXT=$(jq -r '.[-1].text' "$MOCK_HOME/.claude/teams/superbot/inboxes/team-lead.json" 2>/dev/null)
-  if echo "$INBOX_TEXT" | grep -q "Project: e2eproj"; then
-    pass "E2E: project worker inbox message includes Project label"
+  if echo "$INBOX_TEXT" | grep -q "Space: e2eproj"; then
+    pass "E2E: space worker inbox message includes Space label"
   else
-    fail "E2E: project worker inbox missing 'Project: e2eproj' label"
+    fail "E2E: space worker inbox missing 'Space: e2eproj' label"
   fi
 else
-  fail "E2E: project worker did not produce inbox result"
+  fail "E2E: space worker did not produce inbox result"
 fi
 
 rm -rf "$MOCK_CODE_DIR3"

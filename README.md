@@ -15,7 +15,8 @@ A Claude Code plugin that adds superbot capabilities - heartbeat tasks, persiste
 - **User Profile** - Preferences and context about who Claude is helping
 - **Slack Integration** - DM and @mention routing with threaded conversations
 - **Scheduler** - Cron-like scheduled jobs (daily briefings, reminders)
-- **Project Management** - Multi-project task tracking and work orders
+- **Space Management** - Multi-space task tracking and work orders
+- **Spaces Dashboard** - Web UI for managing spaces, tasks, and documentation
 
 ## Quick Start
 
@@ -69,6 +70,73 @@ superbot
 ~/.superbot-plugin/scripts/test-triage.sh      # Test triage decision
 ~/.superbot-plugin/scripts/test-worker.sh      # Dry-run worker
 ```
+
+## Dashboard
+
+The **Spaces Dashboard** provides a web-based UI for managing your Superbot spaces and tasks.
+
+**Access**: http://localhost:3274/
+
+### Features
+
+- View all spaces with status indicators (active, archived, paused)
+- Monitor task counts per space (pending, in progress, completed)
+- Track documentation per space
+- Filter spaces by status
+- See last updated timestamps
+- Responsive design for mobile and desktop
+
+### Getting Started
+
+1. **Build the frontend**:
+   ```bash
+   cd ~/dev/superbot/dashboard-ui
+   npm install
+   npm run build
+   ```
+
+2. **Start the dashboard server**:
+   ```bash
+   cd ~/dev/superbot/dashboard
+   node server.js
+   ```
+
+3. **Open in browser**:
+   ```bash
+   open http://localhost:3274/
+   ```
+
+### Documentation
+
+- **[DASHBOARD_GUIDE.md](./DASHBOARD_GUIDE.md)** - Complete dashboard documentation
+  - Architecture and tech stack
+  - Building and deployment
+  - API integration details
+  - Adding new features
+  - Troubleshooting guide
+
+- **[DASHBOARD_API.md](./DASHBOARD_API.md)** - REST API endpoint documentation
+  - Spaces endpoints
+  - System status endpoints
+  - Configuration and logs
+  - Full API reference
+
+### Development
+
+For development with hot reload:
+
+```bash
+cd ~/dev/superbot/dashboard-ui
+npm run dev
+# Runs on http://localhost:5173/
+```
+
+### Tech Stack
+
+- **Frontend**: React 19 + Vite + Tailwind CSS
+- **UI Components**: shadcn/ui
+- **Backend**: Express.js on port 3274
+- **Data**: File-based (reads from ~/.superbot/spaces/)
 
 ## Files
 
@@ -133,7 +201,7 @@ All config files live in `~/.superbot/`:
 
 After setup, edit `~/.superbot/config.json` to configure:
 
-- `projectsDir` — where to create user projects (default: `~/projects`)
+- `spacesDir` — where to create user spaces (default: `~/spaces`)
 - `defaultModel` — model for general use
 - `slack.botToken` / `slack.appToken` — Slack integration tokens
 - `schedule` — array of scheduled jobs

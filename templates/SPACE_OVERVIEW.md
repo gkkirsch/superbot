@@ -1,12 +1,12 @@
-# Project Plan
+# Space Overview
 
 ## Goal
 
-_What is this project trying to accomplish?_
+_What is this space trying to accomplish?_
 
 ## Current Phase
 
-_What phase is the project in? (planning / building / testing / deployed / maintenance)_
+_What phase is the space in? (planning / building / testing / deployed / maintenance)_
 
 ## Milestones
 

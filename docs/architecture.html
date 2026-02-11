@@ -226,9 +226,9 @@ exec claude \
 |   +-- gog/SKILL.md
 +-- scripts/                  # Implementation scripts
 |   +-- setup.sh
-|   +-- spawn-worker.sh        # Unified worker spawner (Slack + project)
+|   +-- spawn-worker.sh        # Unified worker spawner (Slack + space)
 |   +-- slack-worker-prompt.md  # System prompt for Slack workers
-|   +-- project-worker-prompt.md # System prompt for project workers
+|   +-- space-worker-prompt.md # System prompt for space workers
 |   +-- heartbeat-cron.sh
 |   +-- triage.sh
 |   +-- triage-prompt.md
@@ -301,7 +301,7 @@ exec claude \
     |
     +-- spawn-worker.sh (single script for all worker types)
     |   +-- Slack workers: uses slack-worker-prompt.md
-    |   +-- Project workers: uses project-worker-prompt.md (--project flag)
+    |   +-- Space workers: uses space-worker-prompt.md (--space flag)
     |   +-- Creates/resumes persistent sessions (claude -p)
     |   +-- Runs in background, drops result into superbot inbox
     |
@@ -368,8 +368,8 @@ exec claude \
                 <td class="py-3 px-4">Opus (configurable)</td>
               </tr>
               <tr class="border-b border-border/50">
-                <td class="py-3 px-4">Project workers</td>
-                <td class="py-3 px-4">spawn-worker.sh --project (project-worker-prompt.md)</td>
+                <td class="py-3 px-4">Space workers</td>
+                <td class="py-3 px-4">spawn-worker.sh --space (space-worker-prompt.md)</td>
                 <td class="py-3 px-4">Opus (configurable)</td>
               </tr>
             </tbody>

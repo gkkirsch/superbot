@@ -100,8 +100,18 @@ RESULT=$(claude -p "$OBSERVER_INPUT" \
 # Update offset regardless of result
 echo "{\"session_id\": \"$SESSION_ID\", \"line\": $((TOTAL_LINES + 1))}" > "$OFFSET_FILE"
 
-# If nothing new, exit
-if [[ "$RESULT" == "NOTHING_NEW" || -z "$RESULT" ]]; then
+# If nothing new, exit (check contains rather than exact match — LLMs add reasoning)
+if [[ -z "$RESULT" ]] || echo "$RESULT" | grep -qi "NOTHING_NEW"; then
+  exit 0
+fi
+
+# Strip markdown code block wrappers if present
+RESULT=$(echo "$RESULT" | sed '/^```$/d' | sed '/^```markdown$/d')
+
+# Extract only lines that look like daily note entries (- HH:MM or - ~HH:MM)
+CLEAN_RESULT=$(echo "$RESULT" | grep '^- ' || true)
+
+if [[ -z "$CLEAN_RESULT" ]]; then
   exit 0
 fi
 
@@ -111,5 +121,4 @@ if [[ ! -f "$TODAY_FILE" ]]; then
   echo "" >> "$TODAY_FILE"
 fi
 
-echo "" >> "$TODAY_FILE"
-echo "$RESULT" >> "$TODAY_FILE"
+echo "$CLEAN_RESULT" >> "$TODAY_FILE"

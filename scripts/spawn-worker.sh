@@ -1,11 +1,11 @@
 #!/bin/bash
 # spawn-worker.sh — Spawn or resume a worker session (non-blocking)
-# Usage: spawn-worker.sh <channel> <message_ts> "<message>" [--project <slug>] [name]
+# Usage: spawn-worker.sh <channel> <message_ts> "<message>" [--space <slug>] [name]
 #
 # If a session exists for this thread: resumes it with the new message.
 # If not: registers a new session.
 #
-# With --project <slug>: uses project-worker-prompt.md, runs from project codeDir.
+# With --space <slug>: uses space-worker-prompt.md, runs from space codeDir.
 # Without: uses slack-worker-prompt.md, runs from plugin root.
 #
 # Worker runs in background. When done: drops result into team-lead's inbox.
@@ -34,30 +34,30 @@ SLUG=""
 NAME=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --project) SLUG="$2"; shift 2 ;;
+    --space) SLUG="$2"; shift 2 ;;
     *) NAME="$1"; shift ;;
   esac
 done
 
 if [[ -z "$CHANNEL" || -z "$MESSAGE_TS" || -z "$MESSAGE" ]]; then
-  echo "Usage: spawn-worker.sh <channel> <message_ts> <message> [--project <slug>] [name]" >&2
+  echo "Usage: spawn-worker.sh <channel> <message_ts> <message> [--space <slug>] [name]" >&2
   exit 1
 fi
 
 MODEL=$(jq -r '.defaultModel // "opus"' "$CONFIG")
 
-# Resolve project if specified
+# Resolve space if specified
 WORK_DIR=""
 if [[ -n "$SLUG" ]]; then
-  PROJECT_DIR="$DIR/projects/$SLUG"
-  if [[ ! -f "$PROJECT_DIR/project.json" ]]; then
-    echo "Error: project '$SLUG' not found at $PROJECT_DIR" >&2
+  SPACE_DIR="$DIR/spaces/$SLUG"
+  if [[ ! -f "$SPACE_DIR/space.json" ]]; then
+    echo "Error: space '$SLUG' not found at $SPACE_DIR" >&2
     exit 1
   fi
-  WORK_DIR=$(jq -r '.codeDir' "$PROJECT_DIR/project.json")
+  WORK_DIR=$(jq -r '.codeDir' "$SPACE_DIR/space.json")
   WORK_DIR="${WORK_DIR/#\~/$HOME}"
   if [[ ! -d "$WORK_DIR" ]]; then
-    echo "Error: project codeDir '$WORK_DIR' does not exist" >&2
+    echo "Error: space codeDir '$WORK_DIR' does not exist" >&2
     exit 1
   fi
 fi
@@ -76,10 +76,10 @@ if [[ -n "$EXISTING" ]]; then
   NAME=$(jq -r '.sessions[] | select(.id == "'"$SESSION_ID"'") | .name' "$SESSIONS")
 
   (
-    # cd into work dir if this was a project session
-    SESS_PROJECT=$(jq -r '.sessions[] | select(.id == "'"$SESSION_ID"'") | .project // empty' "$SESSIONS")
-    if [[ -n "$SESS_PROJECT" ]]; then
-      SESS_CODE_DIR=$(jq -r '.codeDir' "$DIR/projects/$SESS_PROJECT/project.json")
+    # cd into work dir if this was a space session
+    SESS_SPACE=$(jq -r '.sessions[] | select(.id == "'"$SESSION_ID"'") | .space // empty' "$SESSIONS")
+    if [[ -n "$SESS_SPACE" ]]; then
+      SESS_CODE_DIR=$(jq -r '.codeDir' "$DIR/spaces/$SESS_SPACE/space.json")
       SESS_CODE_DIR="${SESS_CODE_DIR/#\~/$HOME}"
       [[ -d "$SESS_CODE_DIR" ]] && cd "$SESS_CODE_DIR"
     fi
@@ -110,8 +110,8 @@ else
   SESSION_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
 
   if [[ -n "$SLUG" ]]; then
-    TYPE="project"
-    NAME="${NAME:-project-${SLUG}-$(date +%s | tail -c 5)}"
+    TYPE="space"
+    NAME="${NAME:-space-${SLUG}-$(date +%s | tail -c 5)}"
   else
     TYPE="slack"
     NAME="${NAME:-slack-$(date +%s | tail -c 7)}"
@@ -120,13 +120,13 @@ else
   # Register session
   NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   jq --arg id "$SESSION_ID" --arg name "$NAME" --arg type "$TYPE" \
-     --arg project "${SLUG:-null}" --arg ch "$CHANNEL" --arg ts "$MESSAGE_TS" --arg now "$NOW" \
-    '.sessions += [{id:$id, name:$name, type:$type, status:"active", project:(if $project == "null" then null else $project end), slackThread:{channel:$ch, ts:$ts}, createdAt:$now, lastActiveAt:$now}]' \
+     --arg space "${SLUG:-null}" --arg ch "$CHANNEL" --arg ts "$MESSAGE_TS" --arg now "$NOW" \
+    '.sessions += [{id:$id, name:$name, type:$type, status:"active", space:(if $space == "null" then null else $space end), slackThread:{channel:$ch, ts:$ts}, createdAt:$now, lastActiveAt:$now}]' \
     "$SESSIONS" > "$SESSIONS.tmp" && mv "$SESSIONS.tmp" "$SESSIONS"
 
   # Build system prompt
   if [[ -n "$SLUG" ]]; then
-    SYSTEM_PROMPT=$(sed "s|{{PROJECT}}|$SLUG|g; s|{{CODE_DIR}}|$WORK_DIR|g" "$PLUGIN_ROOT/scripts/project-worker-prompt.md")
+    SYSTEM_PROMPT=$(sed "s|{{SPACE}}|$SLUG|g; s|{{CODE_DIR}}|$WORK_DIR|g" "$PLUGIN_ROOT/scripts/space-worker-prompt.md")
   else
     SYSTEM_PROMPT=$(cat "$PLUGIN_ROOT/scripts/slack-worker-prompt.md")
   fi
@@ -151,7 +151,7 @@ else
 
     if [[ -n "$RESULT" ]]; then
       LABEL="Channel: $CHANNEL, thread: $MESSAGE_TS"
-      [[ -n "$SLUG" ]] && LABEL="Project: $SLUG — $LABEL"
+      [[ -n "$SLUG" ]] && LABEL="Space: $SLUG — $LABEL"
       jq --arg from "$NAME" \
          --arg text "[Worker result] $LABEL"$'\n\n'"$RESULT" \
          --arg summary "Worker $NAME finished" \

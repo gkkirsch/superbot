@@ -14,8 +14,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 RESET='\033[0m'
 
-pass() { ((PASS++)); echo -e "  ${GREEN}PASS${RESET} $1"; }
-fail() { ((FAIL++)); echo -e "  ${RED}FAIL${RESET} $1"; }
+pass() { PASS=$((PASS + 1)); echo -e "  ${GREEN}PASS${RESET} $1"; }
+fail() { FAIL=$((FAIL + 1)); echo -e "  ${RED}FAIL${RESET} $1"; }
 skip() { echo -e "  ${YELLOW}SKIP${RESET} $1"; }
 
 echo "=== Dashboard API Tests ==="

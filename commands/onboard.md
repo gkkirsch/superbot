@@ -51,12 +51,30 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-scheduler.sh
 
 No need to ask — just do it and inform the user they're active.
 
-### Step 4: Cleanup
+### Step 4: Populate Heartbeat Proactively
+
+Based on everything you learned during onboarding, **immediately populate HEARTBEAT.md**. Don't ask — just do it.
+
+1. **Add recurring checks** for the user's spaces, interests, and common tasks. These are things you should monitor every heartbeat cycle:
+   - Their active spaces (check for stale tasks, progress)
+   - Their interests (scan for news, content opportunities)
+   - Any monitoring they'd benefit from (engagement, deadlines)
+
+2. **Add work items** for obvious follow-up from onboarding:
+   - Create spaces for initiatives they mentioned
+   - Research things they referenced but didn't have details on
+   - Draft first steps for goals they expressed
+
+3. **Create spaces** for anything substantial they mentioned wanting to build, research, or accomplish. Use `create-space.sh`.
+
+The user just told you everything about their life and goals. If you don't act on it immediately, you failed the onboarding. This is the difference between a reactive assistant and a proactive one.
+
+### Step 5: Cleanup
 
 Once everything is confirmed:
 - **Create** the setup-complete marker: `touch ~/.superbot/.setup-complete`
 - **Delete** `~/.superbot/ONBOARD.md` using Bash (`rm`)
-- Show a final summary of everything that was set up
+- Show a final summary of everything that was set up, including the heartbeat items and spaces you created
 - **Restart** to load the new identity, user profile, and any installed skills:
   ```bash
   touch ~/.superbot/.restart

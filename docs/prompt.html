@@ -294,7 +294,7 @@ Claude models.
         <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">
           <span class="section-num mr-2 text-base">3</span> SYSTEM.md
         </h2>
-        <p class="text-stone leading-relaxed mb-4">The core superbot instructions. Defines personality principles, narration guidelines, file management, memory behaviors, background automation (heartbeat + scheduler), the Slack router pattern, worker spawning via <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">spawn-worker.sh</code>, projects, self-restart, commands, and skills. This is the longest single section.</p>
+        <p class="text-stone leading-relaxed mb-4">The core superbot instructions. Defines personality principles, narration guidelines, file management, memory behaviors, background automation (heartbeat + scheduler), the Slack router pattern, worker spawning via <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">spawn-worker.sh</code>, spaces, self-restart, commands, and skills. This is the longest single section.</p>
         <p class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-3">Source: <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono">templates/SYSTEM.md</code></p>
         <pre class="bg-codebg border border-border rounded-lg p-4 font-mono text-sm text-sand/80 overflow-x-auto mb-4 max-h-[600px]"><code># Superbot System
 
@@ -349,7 +349,7 @@ All settings live in `~/.superbot/config.json` (created from
 
 | Key                        | Purpose                                   |
 |----------------------------|-------------------------------------------|
-| `projectsDir`              | Where to create user projects              |
+| `spacesDir`                | Where to create user spaces                |
 | `defaultModel`             | Model for general use                      |
 | `slack.botToken`           | Slack bot OAuth token (xoxb-...)           |
 | `slack.appToken`           | Slack app-level token (xapp-...)           |
@@ -387,9 +387,9 @@ You wake up fresh each session. These files are your continuity.
 
 #### Heartbeat (work order queue + team messaging)
 - Checked every 30 minutes by a heartbeat worker
-- Add `- [ ] Work order [project-slug]` to `HEARTBEAT.md` under `## Active`
-- Project-tagged items: worker notifies superbot, which spawns project worker via spawn-worker.sh --project
-- Non-project items: heartbeat worker handles directly
+- Add `- [ ] Work order [space-slug]` to `HEARTBEAT.md` under `## Active`
+- Space-tagged items: worker notifies superbot, which spawns space worker via spawn-worker.sh --space
+- Non-space items: heartbeat worker handles directly
 - Results arrive in team inbox
 
 #### Scheduler (cron jobs)
@@ -660,7 +660,7 @@ Background tasks for the heartbeat worker to process.
         <!-- Tabs -->
         <div class="flex gap-0 border-b border-border mb-0">
           <button onclick="switchWorkerTab('slack')" id="tab-slack" class="worker-tab px-5 py-2.5 text-sm font-mono tracking-wide border-b-2 border-ember text-parchment -mb-px transition-colors">Slack</button>
-          <button onclick="switchWorkerTab('project')" id="tab-project" class="worker-tab px-5 py-2.5 text-sm font-mono tracking-wide border-b-2 border-transparent text-stone hover:text-parchment -mb-px transition-colors">Project</button>
+          <button onclick="switchWorkerTab('space')" id="tab-space" class="worker-tab px-5 py-2.5 text-sm font-mono tracking-wide border-b-2 border-transparent text-stone hover:text-parchment -mb-px transition-colors">Space</button>
           <button onclick="switchWorkerTab('heartbeat')" id="tab-heartbeat" class="worker-tab px-5 py-2.5 text-sm font-mono tracking-wide border-b-2 border-transparent text-stone hover:text-parchment -mb-px transition-colors">Heartbeat</button>
         </div>
 
@@ -668,7 +668,7 @@ Background tasks for the heartbeat worker to process.
         <div id="panel-slack" class="worker-panel">
           <div class="bg-codebg border border-t-0 border-border rounded-b-lg p-5 mb-4">
             <p class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-3">Source: <code class="text-sand/80 font-mono">scripts/slack-worker-prompt.md</code> &bull; Spawned by: <code class="text-sand/80 font-mono">spawn-worker.sh</code></p>
-            <p class="text-stone text-sm leading-relaxed mb-4">Used for general Slack messages that aren't project-specific. The worker reads superbot context files, does the work, and responds. The result is dropped into superbot's inbox &mdash; the worker never posts to Slack directly.</p>
+            <p class="text-stone text-sm leading-relaxed mb-4">Used for general Slack messages that aren't space-specific. The worker reads superbot context files, does the work, and responds. The result is dropped into superbot's inbox &mdash; the worker never posts to Slack directly.</p>
             <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-2 mt-5">Tools available</div>
             <p class="text-stone text-sm mb-4">Full Claude Code toolset (Read, Write, Edit, Bash, Glob, Grep, etc.) via <code class="text-sand/80 font-mono text-xs">--dangerously-skip-permissions</code>. No team messaging &mdash; no SendMessage, no inbox access.</p>
             <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-2 mt-5">Full prompt</div>
@@ -697,16 +697,16 @@ Read these files to understand who you are and who you're helping:
           </div>
         </div>
 
-        <!-- Project Worker -->
-        <div id="panel-project" class="worker-panel hidden">
+        <!-- Space Worker -->
+        <div id="panel-space" class="worker-panel hidden">
           <div class="bg-codebg border border-t-0 border-border rounded-b-lg p-5 mb-4">
-            <p class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-3">Source: <code class="text-sand/80 font-mono">scripts/project-worker-prompt.md</code> &bull; Spawned by: <code class="text-sand/80 font-mono">spawn-worker.sh --project &lt;slug&gt;</code></p>
-            <p class="text-stone text-sm leading-relaxed mb-4">Used when a Slack message is about a specific project. The worker runs from the project's <code class="text-sand/80 font-mono text-xs">codeDir</code>, has access to the project's task system, and can read project-specific context (PLAN.md, README.md). Placeholders <code class="text-sand/80 font-mono text-xs">{{PROJECT}}</code> and <code class="text-sand/80 font-mono text-xs">{{CODE_DIR}}</code> are substituted at spawn time.</p>
+            <p class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-3">Source: <code class="text-sand/80 font-mono">scripts/space-worker-prompt.md</code> &bull; Spawned by: <code class="text-sand/80 font-mono">spawn-worker.sh --space &lt;slug&gt;</code></p>
+            <p class="text-stone text-sm leading-relaxed mb-4">Used when a Slack message is about a specific space. The worker runs from the space's <code class="text-sand/80 font-mono text-xs">codeDir</code>, has access to the space's task system, and can read space-specific context (OVERVIEW.md). Placeholders <code class="text-sand/80 font-mono text-xs">{{SPACE}}</code> and <code class="text-sand/80 font-mono text-xs">{{CODE_DIR}}</code> are substituted at spawn time.</p>
             <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-2 mt-5">Tools available</div>
-            <p class="text-stone text-sm mb-4">Full Claude Code toolset via <code class="text-sand/80 font-mono text-xs">--dangerously-skip-permissions</code>. Working directory is set to the project's <code class="text-sand/80 font-mono text-xs">codeDir</code>. No team messaging.</p>
+            <p class="text-stone text-sm mb-4">Full Claude Code toolset via <code class="text-sand/80 font-mono text-xs">--dangerously-skip-permissions</code>. Working directory is set to the space's <code class="text-sand/80 font-mono text-xs">codeDir</code>. No team messaging.</p>
             <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-2 mt-5">Full prompt</div>
-            <pre class="bg-ink border border-border rounded-lg p-4 font-mono text-sm text-sand/80 overflow-x-auto"><code>You are a project worker for the "superbot" system, working on the
-**{{PROJECT}}** project.
+            <pre class="bg-ink border border-border rounded-lg p-4 font-mono text-sm text-sand/80 overflow-x-auto"><code>You are a space worker for the "superbot" system, working on the
+**{{SPACE}}** space.
 
 ## Superbot Context
 
@@ -715,21 +715,21 @@ Read these files to understand who you are and who you're helping:
 - `~/.superbot/USER.md` — who you're helping
 - `~/.superbot/MEMORY.md` — what you remember
 
-## Project Context
+## Space Context
 
-Read these files to understand the project:
-- `~/.superbot/projects/{{PROJECT}}/PLAN.md` — goals and milestones
-- `~/.superbot/projects/{{PROJECT}}/README.md` — project structure and file guide
-- `~/.superbot/projects/{{PROJECT}}/project.json` — metadata, status, links
-- `~/.superbot/projects/{{PROJECT}}/tasks/` — task backlog (JSON files)
+Read these files to understand the space:
+- `~/.superbot/spaces/{{SPACE}}/OVERVIEW.md` — goals and milestones
+
+- `~/.superbot/spaces/{{SPACE}}/space.json` — metadata, status, links
+- `~/.superbot/spaces/{{SPACE}}/tasks/` — task backlog (JSON files)
 
 Your working directory is: `{{CODE_DIR}}`
 
 ## Task System
 
-**Use the project's own task files**, NOT the built-in Claude Code
-TaskCreate/TaskUpdate tools. Project tasks are JSON files in
-`~/.superbot/projects/{{PROJECT}}/tasks/`:
+**Use the space's own task files**, NOT the built-in Claude Code
+TaskCreate/TaskUpdate tools. Space tasks are JSON files in
+`~/.superbot/spaces/{{SPACE}}/tasks/`:
 
 ```json
 {
@@ -750,7 +750,7 @@ TaskCreate/TaskUpdate tools. Project tasks are JSON files in
 
 ## How to Work
 
-1. Read project context files (README.md, PLAN.md, project.json)
+1. Read space context files (OVERVIEW.md, space.json)
 2. Read superbot context files (IDENTITY, USER, MEMORY)
 3. Scan `tasks/` for pending tasks — pick the highest priority one
 4. Do the work in `{{CODE_DIR}}`
@@ -773,7 +773,7 @@ TaskCreate/TaskUpdate tools. Project tasks are JSON files in
         <div id="panel-heartbeat" class="worker-panel hidden">
           <div class="bg-codebg border border-t-0 border-border rounded-b-lg p-5 mb-4">
             <p class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-3">Source: <code class="text-sand/80 font-mono">scripts/worker-prompt.md</code> &bull; Spawned by: <code class="text-sand/80 font-mono">heartbeat-cron.sh</code></p>
-            <p class="text-stone text-sm leading-relaxed mb-4">The heartbeat worker is different from Slack/project workers. It's a <strong class="text-parchment">team member</strong> &mdash; spawned with <code class="text-sand/80 font-mono text-xs">--team-name superbot --agent-name heartbeat</code>, so it can use SendMessage to talk to superbot. It processes the task queue in HEARTBEAT.md every 30 minutes.</p>
+            <p class="text-stone text-sm leading-relaxed mb-4">The heartbeat worker is different from Slack/space workers. It's a <strong class="text-parchment">team member</strong> &mdash; spawned with <code class="text-sand/80 font-mono text-xs">--team-name superbot --agent-name heartbeat</code>, so it can use SendMessage to talk to superbot. It processes the task queue in HEARTBEAT.md every 30 minutes.</p>
             <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-2 mt-5">Tools available</div>
             <p class="text-stone text-sm mb-4">Full Claude Code toolset via <code class="text-sand/80 font-mono text-xs">--dangerously-skip-permissions</code> <strong class="text-parchment">plus</strong> SendMessage (team messaging). Can message superbot directly. All context files (IDENTITY, USER, MEMORY, HEARTBEAT) are baked into the system prompt at spawn time.</p>
             <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-2 mt-5">Full prompt</div>
@@ -803,17 +803,17 @@ Read these files to understand who you are and who you're helping:
 1. Read `~/.superbot/HEARTBEAT.md` for unchecked tasks (`- [ ]`)
 2. Read context files (IDENTITY, USER, MEMORY)
 3. **Classify each task:**
-   - **Has a `[project-slug]` tag** → This is a project work order.
+   - **Has a `[space-slug]` tag** → This is a space work order.
      Do NOT do the work yourself. Message **superbot** with:
      "Pending work order: &lt;task description&gt; [slug]".
-     Superbot will spawn a project teammate.
-   - **No project tag** → Handle directly
+     Superbot will spawn a space teammate.
+   - **No space tag** → Handle directly
 4. Message **superbot** with a summary of what you found
-5. Work through non-project tasks one at a time
-6. For each completed non-project task:
+5. Work through non-space tasks one at a time
+6. For each completed non-space task:
    - Mark it done in HEARTBEAT.md: `- [x]`
    - Add a note below with timestamp and summary
-7. For project work orders you notified superbot about:
+7. For space work orders you notified superbot about:
    - Add a status note: `&gt; YYYY-MM-DD HH:MMam/pm - Notified superbot`
    - Do NOT mark them `[x]`
 8. Message **superbot** with a completion summary

@@ -1,0 +1,38 @@
+{
+  "name": "slack-bot-management",
+  "version": "1.0.0",
+  "description": "Manage the Slack bot launchd daemon with commands to start, stop, restart, check status, and view logs",
+  "author": "superbot",
+  "keywords": ["slack", "daemon", "launchd", "bot", "management"],
+  "args": {
+    "type": "string",
+    "description": "Command to execute: restart, stop, start, logs, or status",
+    "enum": ["restart", "stop", "start", "logs", "status"]
+  },
+  "handler": {
+    "type": "bash",
+    "script": "#!/bin/bash\n\nset -e\n\nCOMMAND=\"${1:-status}\"\nPLIST_PATH=\"${HOME}/Library/LaunchAgents/com.claude.superbot-slack.plist\"\nLOG_FILE=\"${HOME}/.superbot/logs/slack-stdout.log\"\n\ncase \"${COMMAND}\" in\n  restart)\n    echo \"Restarting Slack bot daemon...\"\n    if launchctl list com.claude.superbot-slack &>/dev/null; then\n      echo \"  Unloading daemon...\"\n      launchctl unload \"${PLIST_PATH}\" 2>/dev/null || true\n      sleep 1\n    fi\n    echo \"  Loading daemon...\"\n    launchctl load \"${PLIST_PATH}\"\n    sleep 1\n    if launchctl list com.claude.superbot-slack &>/dev/null; then\n      echo \"✓ Slack bot daemon restarted successfully\"\n      exit 0\n    else\n      echo \"✗ Failed to restart Slack bot daemon\"\n      exit 1\n    fi\n    ;;\n  \n  stop)\n    echo \"Stopping Slack bot daemon...\"\n    if launchctl list com.claude.superbot-slack &>/dev/null; then\n      launchctl unload \"${PLIST_PATH}\"\n      sleep 1\n      if ! launchctl list com.claude.superbot-slack &>/dev/null; then\n        echo \"✓ Slack bot daemon stopped\"\n        exit 0\n      else\n        echo \"✗ Failed to stop Slack bot daemon\"\n        exit 1\n      fi\n    else\n      echo \"✓ Slack bot daemon is not running\"\n      exit 0\n    fi\n    ;;\n  \n  start)\n    echo \"Starting Slack bot daemon...\"\n    if ! launchctl list com.claude.superbot-slack &>/dev/null; then\n      launchctl load \"${PLIST_PATH}\"\n      sleep 1\n    fi\n    if launchctl list com.claude.superbot-slack &>/dev/null; then\n      echo \"✓ Slack bot daemon started successfully\"\n      exit 0\n    else\n      echo \"✗ Failed to start Slack bot daemon\"\n      exit 1\n    fi\n    ;;\n  \n  logs)\n    echo \"Tailing Slack bot logs...\"\n    if [ ! -f \"${LOG_FILE}\" ]; then\n      echo \"✗ Log file not found at ${LOG_FILE}\"\n      exit 1\n    fi\n    tail -f \"${LOG_FILE}\"\n    ;;\n  \n  status)\n    echo \"Slack bot daemon status:\"\n    if [ ! -f \"${PLIST_PATH}\" ]; then\n      echo \"✗ Plist file not found at ${PLIST_PATH}\"\n      exit 1\n    fi\n    if launchctl list com.claude.superbot-slack &>/dev/null; then\n      echo \"✓ Daemon is loaded and running\"\n      if [ -f \"${LOG_FILE}\" ]; then\n        LAST_LOG=$(tail -1 \"${LOG_FILE}\" 2>/dev/null || echo \"No log entries\")\n        echo \"  Last log: ${LAST_LOG}\"\n      fi\n      exit 0\n    else\n      echo \"✗ Daemon is not loaded\"\n      exit 1\n    fi\n    ;;\n  \n  *)\n    echo \"Unknown command: ${COMMAND}\"\n    echo \"Available commands: restart, stop, start, logs, status\"\n    exit 1\n    ;;\nesac\n"
+  },
+  "examples": [
+    {
+      "command": "slack-bot-management start",
+      "description": "Start the Slack bot daemon"
+    },
+    {
+      "command": "slack-bot-management stop",
+      "description": "Stop the Slack bot daemon"
+    },
+    {
+      "command": "slack-bot-management restart",
+      "description": "Restart the Slack bot daemon (unload then load)"
+    },
+    {
+      "command": "slack-bot-management status",
+      "description": "Check if the daemon is loaded and running"
+    },
+    {
+      "command": "slack-bot-management logs",
+      "description": "Tail the Slack bot log file"
+    }
+  ]
+}

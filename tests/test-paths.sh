@@ -12,8 +12,8 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 RESET='\033[0m'
 
-pass() { ((PASS++)); echo -e "  ${GREEN}PASS${RESET} $1"; }
-fail() { ((FAIL++)); echo -e "  ${RED}FAIL${RESET} $1"; }
+pass() { PASS=$((PASS + 1)); echo -e "  ${GREEN}PASS${RESET} $1"; }
+fail() { FAIL=$((FAIL + 1)); echo -e "  ${RED}FAIL${RESET} $1"; }
 
 echo "=== Path Validation Tests ==="
 echo ""
@@ -115,7 +115,7 @@ if [[ -f "$CONFIG_TEMPLATE" ]]; then
   fi
 
   # Must have expected keys
-  for key in projectsDir defaultModel slack schedule heartbeat; do
+  for key in spacesDir defaultModel slack schedule heartbeat; do
     if jq -e ".$key" "$CONFIG_TEMPLATE" >/dev/null 2>&1; then
       pass "config.template.json has '$key'"
     else

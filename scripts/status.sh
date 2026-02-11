@@ -35,20 +35,20 @@ else
 fi
 echo ""
 
-# Projects
-echo "Projects:"
-if ls "$DIR/projects"/*/project.json &>/dev/null 2>&1; then
-  for proj_json in "$DIR/projects"/*/project.json; do
-    proj_name=$(jq -r '.name' "$proj_json")
-    proj_status=$(jq -r '.status' "$proj_json")
-    proj_priority=$(jq -r '.priority // "medium"' "$proj_json")
-    proj_dir=$(dirname "$proj_json")
-    pending=$(grep -rl '"status":"pending"' "$proj_dir/tasks/" 2>/dev/null | wc -l | tr -d ' ')
-    in_progress=$(grep -rl '"status":"in_progress"' "$proj_dir/tasks/" 2>/dev/null | wc -l | tr -d ' ')
-    echo "  $proj_name [$proj_status, $proj_priority] — $pending pending, $in_progress in progress"
+# Spaces
+echo "Spaces:"
+if ls "$DIR/spaces"/*/space.json &>/dev/null 2>&1; then
+  for space_json in "$DIR/spaces"/*/space.json; do
+    space_name=$(jq -r '.name' "$space_json")
+    space_status=$(jq -r '.status' "$space_json")
+    space_priority=$(jq -r '.priority // "medium"' "$space_json")
+    space_dir=$(dirname "$space_json")
+    pending=$(grep -rl '"status":"pending"' "$space_dir/tasks/" 2>/dev/null | wc -l | tr -d ' ')
+    in_progress=$(grep -rl '"status":"in_progress"' "$space_dir/tasks/" 2>/dev/null | wc -l | tr -d ' ')
+    echo "  $space_name [$space_status, $space_priority] — $pending pending, $in_progress in progress"
   done
 else
-  echo "  No projects"
+  echo "  No spaces"
 fi
 echo ""
 

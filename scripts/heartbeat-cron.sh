@@ -22,15 +22,31 @@ fi
 if "$PLUGIN_ROOT/scripts/triage.sh"; then
   echo "$(date '+%Y-%m-%d %H:%M') - Triage: work needed, notifying superbot" >> "$DIR/logs/heartbeat.log"
 
-  # Extract pending (unchecked) tasks
-  PENDING=$(grep '^\- \[ \]' "$DIR/HEARTBEAT.md" 2>/dev/null | sed 's/^- \[ \] //' || echo "Check HEARTBEAT.md for details.")
+  # Current time for time awareness
+  CURRENT_TIME="$(date '+%A %B %-d, %-I:%M %p')"
+
+  # Extract pending (unchecked) work items
+  PENDING=$(grep '^\- \[ \]' "$DIR/HEARTBEAT.md" 2>/dev/null | sed 's/^- \[ \] //' || true)
+
+  # Extract recurring checks
+  RECURRING=$(sed -n '/^## Recurring Checks/,/^## /{ /^- /p; }' "$DIR/HEARTBEAT.md" 2>/dev/null || true)
+
+  # Build message
+  BODY="Current time: $CURRENT_TIME\n\n"
+  if [[ -n "$RECURRING" ]]; then
+    BODY+="Recurring checks:\n$RECURRING\n\n"
+  fi
+  if [[ -n "$PENDING" ]]; then
+    BODY+="Pending work items:\n$PENDING\n\n"
+  fi
+  BODY+="Check HEARTBEAT.md, work through them, and mark work items done (\`[x]\`) when complete."
 
   # Drop a notification in team-lead's inbox
   INBOX="$TEAM_DIR/inboxes/team-lead.json"
   MSG=$(jq -n \
     --arg from "heartbeat" \
-    --arg text "You have pending heartbeat items that need attention:\n\n$PENDING\n\nCheck HEARTBEAT.md, work through them, and mark each one done (\`[x]\`) when complete." \
-    --arg summary "Pending heartbeat items need attention" \
+    --arg text "$BODY" \
+    --arg summary "Heartbeat: $CURRENT_TIME" \
     --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     '{from: $from, text: $text, summary: $summary, timestamp: $ts, read: false}')
 

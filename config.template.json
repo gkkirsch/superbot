@@ -1,5 +1,5 @@
 {
-  "projectsDir": "~/projects",
+  "spacesDir": "~/spaces",
   "defaultModel": "opus",
   "slack": {
     "botToken": "",

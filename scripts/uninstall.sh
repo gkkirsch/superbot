@@ -63,7 +63,12 @@ for skill_dir in "$PLUGIN_ROOT"/skills/*/; do
 done
 
 # Also remove skills installed by setup.sh
-for extra_skill in daily heartbeat twitter-reader; do
+for extra_skill in daily heartbeat twitter-reader agent-browser \
+  brainstorming dispatching-parallel-agents executing-plans \
+  finishing-a-development-branch receiving-code-review requesting-code-review \
+  subagent-driven-development systematic-debugging test-driven-development \
+  using-git-worktrees using-superpowers verification-before-completion \
+  writing-plans writing-skills; do
   if [[ -d "$SKILLS_DIR/$extra_skill" ]]; then
     rm -rf "$SKILLS_DIR/$extra_skill"
     echo "  Removed skill: $extra_skill"

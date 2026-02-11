@@ -10,10 +10,18 @@ if [[ ! -f "$DIR/HEARTBEAT.md" ]]; then
   exit 1
 fi
 
-# Quick model check - exit 0 if work needed, exit 1 if not
-response=$(claude -p "$(cat "$PLUGIN_ROOT/scripts/triage-prompt.md")
+HEARTBEAT="$DIR/HEARTBEAT.md"
 
-Current tasks:
-$(cat "$DIR/HEARTBEAT.md")" --model haiku 2>/dev/null)
+# Fast path: if there are unchecked work items, always trigger
+if grep -q '^\- \[ \]' "$HEARTBEAT" 2>/dev/null; then
+  exit 0
+fi
 
-[[ "$response" == *"YES"* ]] && exit 0 || exit 1
+# Fast path: if there are recurring checks (non-empty lines under ## Recurring Checks), always trigger
+RECURRING=$(sed -n '/^## Recurring Checks/,/^## /{ /^- /p; }' "$HEARTBEAT" 2>/dev/null)
+if [[ -n "$RECURRING" ]]; then
+  exit 0
+fi
+
+# Nothing found
+exit 1
