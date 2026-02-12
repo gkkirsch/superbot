@@ -226,37 +226,6 @@ else
   echo "Installed agent-browser skill"
 fi
 
-# --- Install superpowers skills (available to workers) ---
-
-echo ""
-echo "Installing superpowers skills..."
-
-SUPERPOWERS_SKILLS=(
-  brainstorming
-  dispatching-parallel-agents
-  executing-plans
-  finishing-a-development-branch
-  receiving-code-review
-  requesting-code-review
-  subagent-driven-development
-  systematic-debugging
-  test-driven-development
-  using-git-worktrees
-  using-superpowers
-  verification-before-completion
-  writing-plans
-  writing-skills
-)
-
-for skill in "${SUPERPOWERS_SKILLS[@]}"; do
-  if [[ -d "$HOME/.claude/skills/$skill" ]]; then
-    echo "  Skipped $skill (already exists)"
-  else
-    echo "  Installing $skill..."
-    npx skills add obra/superpowers-marketplace@"$skill" -g -a claude-code -y 2>/dev/null || echo "  Warning: could not install $skill"
-  fi
-done
-
 # --- Install Claude Code plugins ---
 
 # Add marketplaces

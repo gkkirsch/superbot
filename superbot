@@ -39,21 +39,17 @@ case "${1:-}" in
       echo "Updated skill: $skill_name"
     done
 
-    # 3. Re-install superpowers skills (force update)
-    SUPERPOWERS_SKILLS=(
-      brainstorming dispatching-parallel-agents executing-plans
-      finishing-a-development-branch receiving-code-review requesting-code-review
-      subagent-driven-development systematic-debugging test-driven-development
-      using-git-worktrees using-superpowers verification-before-completion
-      writing-plans writing-skills
-    )
+    # 3. Update plugins (superpowers + feature-dev)
     echo ""
-    echo "Updating superpowers skills..."
-    for skill in "${SUPERPOWERS_SKILLS[@]}"; do
-      npx skills add obra/superpowers-marketplace@"$skill" -g -a claude-code -y 2>/dev/null \
-        && echo "  Updated $skill" \
-        || echo "  Warning: could not update $skill"
-    done
+    echo "Updating plugins..."
+    claude plugin marketplace add obra/superpowers-marketplace 2>/dev/null || true
+    claude plugin marketplace add anthropics/claude-code 2>/dev/null || true
+    claude plugin install "superpowers@superpowers-marketplace" 2>/dev/null \
+      && echo "  Updated superpowers plugin" \
+      || echo "  Warning: could not update superpowers plugin"
+    claude plugin install "feature-dev" 2>/dev/null \
+      && echo "  Updated feature-dev plugin" \
+      || echo "  Warning: could not update feature-dev plugin"
 
     # 4. Ensure general space exists
     if [[ ! -d "$DIR/spaces/general" ]]; then
