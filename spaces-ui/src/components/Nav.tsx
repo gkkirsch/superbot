@@ -1,14 +1,60 @@
 import { useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, Link, useLocation } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { topNavItems } from '@/lib/navigation'
+
+function useHealthStatus() {
+  return useQuery({
+    queryKey: ['health'],
+    queryFn: async () => {
+      const res = await fetch('/api/health')
+      if (!res.ok) throw new Error('Failed')
+      return res.json() as Promise<{ overall: string }>
+    },
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  })
+}
+
+function HealthDot() {
+  const { data } = useHealthStatus()
+
+  if (!data) {
+    return (
+      <Link to="/health" className="relative flex items-center gap-1.5 text-xs text-stone/50 hover:text-stone transition-colors" title="Loading health...">
+        <span className="h-2.5 w-2.5 rounded-full bg-stone/30 animate-pulse" />
+      </Link>
+    )
+  }
+
+  const isHealthy = data.overall === 'healthy'
+
+  return (
+    <Link
+      to="/health"
+      className={`relative flex items-center gap-1.5 text-xs transition-colors ${
+        isHealthy ? 'text-moss hover:text-moss/80' : 'text-ember hover:text-ember/80'
+      }`}
+      title={isHealthy ? 'All systems operational' : 'System degraded — click for details'}
+    >
+      <span className="relative flex h-2.5 w-2.5">
+        {!isHealthy && (
+          <span className="absolute inline-flex h-full w-full rounded-full bg-ember opacity-40 animate-ping" />
+        )}
+        <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${isHealthy ? 'bg-moss' : 'bg-ember'}`} />
+      </span>
+      <span className="hidden sm:inline">{isHealthy ? 'Healthy' : 'Degraded'}</span>
+    </Link>
+  )
+}
 
 export function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
 
   const isActive = (to: string, end?: boolean) => {
-    if (end) return location.pathname === '/' || location.pathname === ''
+    if (end) return location.pathname === to
     return location.pathname.startsWith(to)
   }
 
@@ -42,12 +88,8 @@ export function Nav() {
 
         <div className="flex-1" />
 
-        <a
-          href="/"
-          className="hidden md:block text-xs text-stone hover:text-sand transition-colors"
-        >
-          Legacy Dashboard
-        </a>
+        {/* Health indicator */}
+        <HealthDot />
 
         {/* Mobile hamburger */}
         <button
@@ -79,13 +121,6 @@ export function Nav() {
               {label}
             </NavLink>
           ))}
-          <hr className="border-border-custom my-2" />
-          <a
-            href="/"
-            className="block px-3 py-2 text-xs text-stone hover:text-sand transition-colors"
-          >
-            Legacy Dashboard
-          </a>
         </div>
       )}
     </nav>

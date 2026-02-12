@@ -140,20 +140,9 @@ const ALLOWED_LOGS = ['heartbeat.log', 'slack-bot.log', 'scheduler.log', 'observ
 // Routes
 // ---------------------------------------------------------------------------
 
-// Serve existing dashboard HTML at /
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'dashboard.html'));
-});
-
-// Serve Spaces React app at /spaces and /spaces/*
+// Serve React app at root
 if (fs.existsSync(SPACES_UI_DIST)) {
-  app.use('/spaces', express.static(SPACES_UI_DIST, { redirect: false }));
-  app.get('/spaces', (_req, res) => {
-    res.sendFile(path.join(SPACES_UI_DIST, 'index.html'));
-  });
-  app.get('/spaces/{*path}', (_req, res) => {
-    res.sendFile(path.join(SPACES_UI_DIST, 'index.html'));
-  });
+  app.use(express.static(SPACES_UI_DIST, { redirect: false }));
 }
 
 // Context files
@@ -587,11 +576,130 @@ app.get('/api/docs/:slug', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Health / Dashboard API
+// ---------------------------------------------------------------------------
+
+app.get('/api/health', (_req, res) => {
+  const { execSync } = require('child_process');
+  const checks = [];
+
+  // Heartbeat daemon
+  try {
+    const out = execSync('launchctl list 2>/dev/null', { encoding: 'utf8', timeout: 3000 });
+    checks.push({
+      name: 'Heartbeat',
+      description: 'Background heartbeat cron',
+      status: out.includes('com.claude.superbot-heartbeat') ? 'healthy' : 'stopped',
+      detail: out.includes('com.claude.superbot-heartbeat') ? 'LaunchAgent running' : 'LaunchAgent not loaded',
+    });
+  } catch (_) {
+    checks.push({ name: 'Heartbeat', description: 'Background heartbeat cron', status: 'unknown', detail: 'Could not check launchctl' });
+  }
+
+  // Scheduler daemon
+  try {
+    const out = execSync('launchctl list 2>/dev/null', { encoding: 'utf8', timeout: 3000 });
+    checks.push({
+      name: 'Scheduler',
+      description: 'Time-based job scheduler',
+      status: out.includes('com.claude.superbot-scheduler') ? 'healthy' : 'stopped',
+      detail: out.includes('com.claude.superbot-scheduler') ? 'LaunchAgent running' : 'LaunchAgent not loaded',
+    });
+  } catch (_) {
+    checks.push({ name: 'Scheduler', description: 'Time-based job scheduler', status: 'unknown', detail: 'Could not check launchctl' });
+  }
+
+  // Slack bot
+  try {
+    const out = execSync('pgrep -f "slack-bot.js" 2>/dev/null || true', { encoding: 'utf8', timeout: 3000 });
+    checks.push({
+      name: 'Slack Bot',
+      description: 'Slack message listener',
+      status: out.trim() ? 'healthy' : 'stopped',
+      detail: out.trim() ? `PID ${out.trim().split('\\n')[0]}` : 'Process not found',
+    });
+  } catch (_) {
+    checks.push({ name: 'Slack Bot', description: 'Slack message listener', status: 'unknown', detail: 'Could not check process' });
+  }
+
+  // Dashboard server (this is us — always healthy if we're responding)
+  checks.push({
+    name: 'Dashboard',
+    description: `Express server on port ${PORT}`,
+    status: 'healthy',
+    detail: `Running (PID ${process.pid})`,
+  });
+
+  // Active workers/sessions
+  const sessions = readJsonOr(path.join(SUPERBOT_DIR, 'sessions.json'), { sessions: [] });
+  const activeSessions = (sessions.sessions || []).filter(s => s.status === 'active');
+  checks.push({
+    name: 'Workers',
+    description: 'Active agent sessions',
+    status: activeSessions.length > 0 ? 'healthy' : 'idle',
+    detail: `${activeSessions.length} active session${activeSessions.length !== 1 ? 's' : ''}`,
+    sessions: activeSessions.map(s => ({ name: s.name, space: s.space || null })),
+  });
+
+  // Context files
+  const contextFiles = ['IDENTITY.md', 'USER.md', 'MEMORY.md', 'HEARTBEAT.md'];
+  const missing = contextFiles.filter(f => !fs.existsSync(path.join(SUPERBOT_DIR, f)));
+  checks.push({
+    name: 'Context Files',
+    description: 'Core identity and memory files',
+    status: missing.length === 0 ? 'healthy' : 'warning',
+    detail: missing.length === 0 ? `All ${contextFiles.length} files present` : `Missing: ${missing.join(', ')}`,
+  });
+
+  // Spaces
+  let spaceCount = 0;
+  try {
+    if (fs.existsSync(SPACES_DIR)) {
+      spaceCount = fs.readdirSync(SPACES_DIR, { withFileTypes: true }).filter(e => e.isDirectory()).length;
+    }
+  } catch (_) {}
+  checks.push({
+    name: 'Spaces',
+    description: 'Active project spaces',
+    status: spaceCount > 0 ? 'healthy' : 'idle',
+    detail: `${spaceCount} space${spaceCount !== 1 ? 's' : ''}`,
+  });
+
+  // Heartbeat items
+  const hb = readFileOr(path.join(SUPERBOT_DIR, 'HEARTBEAT.md'));
+  const pendingItems = (hb.content.match(/^- \[ \]/gm) || []).length;
+  const recurringChecks = (hb.content.match(/^- Check /gm) || []).length + (hb.content.match(/^- Scan /gm) || []).length + (hb.content.match(/^- Remind /gm) || []).length;
+  checks.push({
+    name: 'Heartbeat Queue',
+    description: 'Pending work items and recurring checks',
+    status: pendingItems > 0 ? 'active' : 'idle',
+    detail: `${pendingItems} pending item${pendingItems !== 1 ? 's' : ''}, ${recurringChecks} recurring check${recurringChecks !== 1 ? 's' : ''}`,
+  });
+
+  const healthy = checks.filter(c => c.status === 'healthy').length;
+  const total = checks.length;
+
+  res.json({
+    overall: healthy >= total - 2 ? 'healthy' : 'degraded',
+    checks,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SPA Catch-all (must be LAST)
+// ---------------------------------------------------------------------------
+
+if (fs.existsSync(SPACES_UI_DIST)) {
+  app.get('{*path}', (_req, res) => {
+    res.sendFile(path.join(SPACES_UI_DIST, 'index.html'));
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Start
 // ---------------------------------------------------------------------------
 
 app.listen(PORT, () => {
   console.log(`Superbot Dashboard running at http://localhost:${PORT}`);
-  console.log(`  Dashboard:  http://localhost:${PORT}/`);
-  console.log(`  Spaces UI:  http://localhost:${PORT}/spaces`);
 });

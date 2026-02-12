@@ -46,7 +46,7 @@ export function SpaceDetail() {
       <div className="min-h-screen bg-ink">
         <div className="mx-auto max-w-5xl px-6 py-10">
           <Link
-            to="/"
+            to="/spaces"
             className="inline-flex items-center gap-1.5 text-sm text-stone hover:text-sand transition-colors mb-6"
           >
             <ArrowLeft className="h-4 w-4" />

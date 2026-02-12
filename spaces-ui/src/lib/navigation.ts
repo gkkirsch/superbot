@@ -1,7 +1,8 @@
-import { LayoutGrid, Activity, Settings, BookOpen } from 'lucide-react'
+import { LayoutGrid, Activity, Settings, BookOpen, Gauge } from 'lucide-react'
 
 export const topNavItems = [
-  { to: '/', label: 'Spaces', icon: LayoutGrid, end: true },
+  { to: '/', label: 'Dashboard', icon: Gauge, end: true },
+  { to: '/spaces', label: 'Spaces', icon: LayoutGrid },
   { to: '/activity', label: 'Activity', icon: Activity },
   { to: '/system', label: 'System', icon: Settings },
   { to: '/docs', label: 'Docs', icon: BookOpen },

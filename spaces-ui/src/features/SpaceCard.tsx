@@ -33,7 +33,7 @@ export function SpaceCard({ space, style }: SpaceCardProps) {
   return (
     <Card
       className="cursor-pointer border-border-custom transition-all duration-200 hover:border-sand/40 hover:-translate-y-0.5"
-      onClick={() => navigate(`/${space.slug}`)}
+      onClick={() => navigate(`/spaces/${space.slug}`)}
       style={style}
     >
       <CardHeader className="pb-3">

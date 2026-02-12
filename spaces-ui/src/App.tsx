@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Nav } from './components/Nav'
+import { Dashboard } from './pages/Dashboard'
+import { Health } from './pages/Health'
 import { SpacesOverview } from './pages/SpacesOverview'
 import { SpaceDetail } from './pages/SpaceDetail'
 import { SectionLayout } from './layouts/SectionLayout'
@@ -17,12 +19,18 @@ import { DocsPage } from './pages/docs/DocsPage'
 
 function App() {
   return (
-    <BrowserRouter basename="/spaces">
+    <BrowserRouter>
       <Nav />
       <Routes>
+        {/* Dashboard */}
+        <Route path="/" element={<Dashboard />} />
+
+        {/* Health */}
+        <Route path="/health" element={<Health />} />
+
         {/* Spaces */}
-        <Route path="/" element={<SpacesOverview />} />
-        <Route path="/:slug" element={<SpaceDetail />} />
+        <Route path="/spaces" element={<SpacesOverview />} />
+        <Route path="/spaces/:slug" element={<SpaceDetail />} />
 
         {/* Activity */}
         <Route path="/activity" element={<SectionLayout section="activity" />}>
