@@ -57,6 +57,12 @@ fi
 mkdir -p "$DIR"
 mkdir -p "$DIR/daily"
 mkdir -p "$DIR/spaces"
+
+# Create default "general" space (catch-all for misc work)
+if [[ ! -d "$DIR/spaces/general" ]]; then
+  bash "$PLUGIN_ROOT/scripts/create-space.sh" general "General" "" "Catch-all space for tasks that don't belong to a specific space"
+  echo "Created general space"
+fi
 mkdir -p "$DIR/prompts"
 mkdir -p "$DIR/logs"
 

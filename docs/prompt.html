@@ -657,115 +657,14 @@ Background tasks for the heartbeat worker to process.
         <h2 class="font-heading text-2xl font-light tracking-wide border-b border-border pb-2 mb-6 mt-16 text-parchment">Worker Prompts</h2>
         <p class="text-stone leading-relaxed mb-6">Workers are standalone Claude processes spawned by superbot. Each type gets a different system prompt. These are <strong class="text-parchment">not</strong> part of the main system prompt &mdash; they're passed to <code class="bg-codebg px-1.5 py-0.5 rounded text-sand/80 font-mono text-sm">claude -p --system-prompt</code> when the worker is created.</p>
 
-        <!-- Tabs -->
-        <div class="flex gap-0 border-b border-border mb-0">
-          <button onclick="switchWorkerTab('slack')" id="tab-slack" class="worker-tab px-5 py-2.5 text-sm font-mono tracking-wide border-b-2 border-ember text-parchment -mb-px transition-colors">Slack</button>
-          <button onclick="switchWorkerTab('space')" id="tab-space" class="worker-tab px-5 py-2.5 text-sm font-mono tracking-wide border-b-2 border-transparent text-stone hover:text-parchment -mb-px transition-colors">Space</button>
-          <button onclick="switchWorkerTab('heartbeat')" id="tab-heartbeat" class="worker-tab px-5 py-2.5 text-sm font-mono tracking-wide border-b-2 border-transparent text-stone hover:text-parchment -mb-px transition-colors">Heartbeat</button>
-        </div>
-
-        <!-- Slack Worker -->
-        <div id="panel-slack" class="worker-panel">
-          <div class="bg-codebg border border-t-0 border-border rounded-b-lg p-5 mb-4">
-            <p class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-3">Source: <code class="text-sand/80 font-mono">scripts/slack-worker-prompt.md</code> &bull; Spawned by: <code class="text-sand/80 font-mono">spawn-worker.sh</code></p>
-            <p class="text-stone text-sm leading-relaxed mb-4">Used for general Slack messages that aren't space-specific. The worker reads superbot context files, does the work, and responds. The result is dropped into superbot's inbox &mdash; the worker never posts to Slack directly.</p>
-            <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-2 mt-5">Tools available</div>
-            <p class="text-stone text-sm mb-4">Full Claude Code toolset (Read, Write, Edit, Bash, Glob, Grep, etc.) via <code class="text-sand/80 font-mono text-xs">--dangerously-skip-permissions</code>. No team messaging &mdash; no SendMessage, no inbox access.</p>
-            <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-2 mt-5">Full prompt</div>
-            <pre class="bg-ink border border-border rounded-lg p-4 font-mono text-sm text-sand/80 overflow-x-auto"><code>You are a Slack worker for the "superbot" system.
-
-## Superbot Context
-
-Read these files to understand who you are and who you're helping:
-- `~/.superbot/IDENTITY.md` — your personality
-- `~/.superbot/USER.md` — who you're helping
-- `~/.superbot/MEMORY.md` — what you remember
-
-## How to Work
-
-1. Read the superbot context files
-2. Do the work described in the prompt
-3. Respond with a clear, complete summary of what you did or found
-4. If this is a follow-up message, you have full context from previous messages
-
-## Rules
-
-- **Never post to Slack directly** — the orchestrator handles that
-- Don't make destructive changes without explicit permission
-- Your response IS the result — respond concisely but completely</code></pre>
-            <p class="text-stone text-xs mt-3 leading-relaxed">The launcher also appends Slack context (channel + thread_ts) when spawning.</p>
-          </div>
-        </div>
-
-        <!-- Space Worker -->
-        <div id="panel-space" class="worker-panel hidden">
-          <div class="bg-codebg border border-t-0 border-border rounded-b-lg p-5 mb-4">
-            <p class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-3">Source: <code class="text-sand/80 font-mono">scripts/space-worker-prompt.md</code> &bull; Spawned by: <code class="text-sand/80 font-mono">spawn-worker.sh --space &lt;slug&gt;</code></p>
-            <p class="text-stone text-sm leading-relaxed mb-4">Used when a Slack message is about a specific space. The worker runs from the space's <code class="text-sand/80 font-mono text-xs">codeDir</code>, has access to the space's task system, and can read space-specific context (OVERVIEW.md). Placeholders <code class="text-sand/80 font-mono text-xs">{{SPACE}}</code> and <code class="text-sand/80 font-mono text-xs">{{CODE_DIR}}</code> are substituted at spawn time.</p>
+        <!-- Worker -->
+        <div>
+          <div class="bg-codebg border border-border rounded-lg p-5 mb-4">
+            <p class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-3">Source: <code class="text-sand/80 font-mono">scripts/worker-prompt.md</code> &bull; Spawned by: <code class="text-sand/80 font-mono">spawn-worker.sh --space &lt;slug&gt;</code></p>
+            <p class="text-stone text-sm leading-relaxed mb-4">All workers run in a space context. The worker runs from the space's <code class="text-sand/80 font-mono text-xs">codeDir</code>, has access to the space's task system, and reads space-specific context (OVERVIEW.md, tasks/, docs/). Placeholders <code class="text-sand/80 font-mono text-xs">{{SPACE}}</code> and <code class="text-sand/80 font-mono text-xs">{{CODE_DIR}}</code> are substituted at spawn time. Results are dropped into the orchestrator's inbox.</p>
             <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-2 mt-5">Tools available</div>
             <p class="text-stone text-sm mb-4">Full Claude Code toolset via <code class="text-sand/80 font-mono text-xs">--dangerously-skip-permissions</code>. Working directory is set to the space's <code class="text-sand/80 font-mono text-xs">codeDir</code>. No team messaging.</p>
-            <div class="text-[10px] font-medium tracking-[0.15em] uppercase text-stone/60 mb-2 mt-5">Full prompt</div>
-            <pre class="bg-ink border border-border rounded-lg p-4 font-mono text-sm text-sand/80 overflow-x-auto"><code>You are a space worker for the "superbot" system, working on the
-**{{SPACE}}** space.
-
-## Superbot Context
-
-Read these files to understand who you are and who you're helping:
-- `~/.superbot/IDENTITY.md` — your personality
-- `~/.superbot/USER.md` — who you're helping
-- `~/.superbot/MEMORY.md` — what you remember
-
-## Space Context
-
-Read these files to understand the space:
-- `~/.superbot/spaces/{{SPACE}}/OVERVIEW.md` — goals and milestones
-
-- `~/.superbot/spaces/{{SPACE}}/space.json` — metadata, status, links
-- `~/.superbot/spaces/{{SPACE}}/tasks/` — task backlog (JSON files)
-
-Your working directory is: `{{CODE_DIR}}`
-
-## Task System
-
-**Use the space's own task files**, NOT the built-in Claude Code
-TaskCreate/TaskUpdate tools. Space tasks are JSON files in
-`~/.superbot/spaces/{{SPACE}}/tasks/`:
-
-```json
-{
-  "id": 1,
-  "subject": "Brief title",
-  "description": "What needs to be done",
-  "status": "pending",
-  "priority": "high",
-  "createdAt": "2026-02-08T10:00:00Z",
-  "updatedAt": "2026-02-08T10:00:00Z",
-  "completedAt": null
-}
-```
-
-- Status: `pending` → `in_progress` → `completed`
-- Priority: `critical`, `high`, `medium`, `low`
-- Read `.highwatermark` for the next task ID; increment after creating
-
-## How to Work
-
-1. Read space context files (OVERVIEW.md, space.json)
-2. Read superbot context files (IDENTITY, USER, MEMORY)
-3. Scan `tasks/` for pending tasks — pick the highest priority one
-4. Do the work in `{{CODE_DIR}}`
-5. Update the task JSON file: set status when starting/completing
-6. Update docs/ topic files when you learn something significant
-7. Respond with a clear, complete summary of what you did
-8. If this is a follow-up message, you have full context from previous messages
-
-## Rules
-
-- **Never post to Slack directly** — the orchestrator handles that
-- Don't make destructive changes without explicit permission
-- Your response IS the result — respond concisely but completely
-- If all pending tasks are blocked or need decisions, report that</code></pre>
-            <p class="text-stone text-xs mt-3 leading-relaxed">Slack context (channel + thread_ts) is appended when spawned from a Slack message.</p>
+            <p class="text-stone text-xs mt-3 leading-relaxed">Slack context (channel + thread_ts) is appended when spawned from a Slack message. See the full prompt in the dashboard under Prompts.</p>
           </div>
         </div>
 
@@ -865,17 +764,6 @@ Read these files to understand who you are and who you're helping:
 
     document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-    // Worker prompt tabs
-    function switchWorkerTab(name) {
-      document.querySelectorAll('.worker-tab').forEach(t => {
-        t.classList.remove('border-ember', 'text-parchment');
-        t.classList.add('border-transparent', 'text-stone');
-      });
-      document.querySelectorAll('.worker-panel').forEach(p => p.classList.add('hidden'));
-      document.getElementById('tab-' + name).classList.remove('border-transparent', 'text-stone');
-      document.getElementById('tab-' + name).classList.add('border-ember', 'text-parchment');
-      document.getElementById('panel-' + name).classList.remove('hidden');
-    }
   </script>
 </body>
 </html>

@@ -226,13 +226,11 @@ exec claude \
 |   +-- gog/SKILL.md
 +-- scripts/                  # Implementation scripts
 |   +-- setup.sh
-|   +-- spawn-worker.sh        # Unified worker spawner (Slack + space)
-|   +-- slack-worker-prompt.md  # System prompt for Slack workers
-|   +-- space-worker-prompt.md # System prompt for space workers
+|   +-- spawn-worker.sh        # Worker spawner (always runs in a space)
+|   +-- worker-prompt.md       # System prompt for workers
 |   +-- heartbeat-cron.sh
 |   +-- triage.sh
 |   +-- triage-prompt.md
-|   +-- worker-prompt.md
 |   +-- daily-observer.sh
 |   +-- parse-session.sh
 |   +-- observer-prompt.md
@@ -299,9 +297,8 @@ exec claude \
     +-- Inbox: ~/.claude/teams/superbot/inboxes/superbot.json
     |   (receives worker results and Slack bot messages)
     |
-    +-- spawn-worker.sh (single script for all worker types)
-    |   +-- Slack workers: uses slack-worker-prompt.md
-    |   +-- Space workers: uses space-worker-prompt.md (--space flag)
+    +-- spawn-worker.sh (all workers run in a space)
+    |   +-- Uses worker-prompt.md with {{SPACE}} and {{CODE_DIR}} substitution
     |   +-- Creates/resumes persistent sessions (claude -p)
     |   +-- Runs in background, drops result into superbot inbox
     |
@@ -363,13 +360,8 @@ exec claude \
                 <td class="py-3 px-4">Opus (configurable)</td>
               </tr>
               <tr class="border-b border-border/50">
-                <td class="py-3 px-4">Slack workers</td>
-                <td class="py-3 px-4">spawn-worker.sh (slack-worker-prompt.md)</td>
-                <td class="py-3 px-4">Opus (configurable)</td>
-              </tr>
-              <tr class="border-b border-border/50">
-                <td class="py-3 px-4">Space workers</td>
-                <td class="py-3 px-4">spawn-worker.sh --space (space-worker-prompt.md)</td>
+                <td class="py-3 px-4">Workers</td>
+                <td class="py-3 px-4">spawn-worker.sh --space (worker-prompt.md)</td>
                 <td class="py-3 px-4">Opus (configurable)</td>
               </tr>
             </tbody>

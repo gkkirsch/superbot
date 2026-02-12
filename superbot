@@ -9,6 +9,64 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")" && pwd)"
 RESTART_FLAG="$DIR/.restart"
 LAUNCHER_PID=$$
 
+# --- Subcommands (handled before launching claude) ---
+case "${1:-}" in
+  update)
+    echo "Updating superbot..."
+    echo ""
+
+    # 1. Pull latest code (prompts, scripts, UI source, templates)
+    cd "$PLUGIN_ROOT"
+    BEFORE=$(git rev-parse HEAD 2>/dev/null)
+    git pull --ff-only 2>&1
+    AFTER=$(git rev-parse HEAD 2>/dev/null)
+    if [[ "$BEFORE" == "$AFTER" ]]; then
+      echo "Code: already up to date."
+    else
+      echo "Code: updated $(git log --oneline "$BEFORE..$AFTER" | wc -l | tr -d ' ') commits:"
+      git log --oneline "$BEFORE..$AFTER"
+    fi
+    echo ""
+
+    # 2. Force-update built-in skills (superbot's own, always overwrite)
+    SKILLS_DIR="$HOME/.claude/skills"
+    mkdir -p "$SKILLS_DIR"
+    for skill_dir in "$PLUGIN_ROOT"/skills/*/; do
+      [[ -d "$skill_dir" ]] || continue
+      skill_name="$(basename "$skill_dir")"
+      rm -rf "$SKILLS_DIR/$skill_name"
+      cp -r "$skill_dir" "$SKILLS_DIR/$skill_name"
+      echo "Updated skill: $skill_name"
+    done
+
+    # 3. Re-install superpowers skills (force update)
+    SUPERPOWERS_SKILLS=(
+      brainstorming dispatching-parallel-agents executing-plans
+      finishing-a-development-branch receiving-code-review requesting-code-review
+      subagent-driven-development systematic-debugging test-driven-development
+      using-git-worktrees using-superpowers verification-before-completion
+      writing-plans writing-skills
+    )
+    echo ""
+    echo "Updating superpowers skills..."
+    for skill in "${SUPERPOWERS_SKILLS[@]}"; do
+      npx skills add obra/superpowers-marketplace@"$skill" -g -a claude-code -y 2>/dev/null \
+        && echo "  Updated $skill" \
+        || echo "  Warning: could not update $skill"
+    done
+
+    # 4. Ensure general space exists
+    if [[ ! -d "$DIR/spaces/general" ]]; then
+      bash "$PLUGIN_ROOT/scripts/create-space.sh" general "General" "" "Catch-all space for tasks that don't belong to a specific space"
+      echo "Created general space"
+    fi
+
+    echo ""
+    echo "Update complete. Restart superbot to pick up changes."
+    exit 0
+    ;;
+esac
+
 # Guard: run setup if not initialized
 if [[ ! -d "$DIR" ]]; then
   echo "Superbot not set up yet. Running setup..."

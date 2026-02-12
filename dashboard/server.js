@@ -491,12 +491,10 @@ app.get('/api/spaces/:slug/overview', (req, res) => {
 
 app.get('/api/prompts', (_req, res) => {
   const prompts = [
-    { id: 'team-lead', name: 'Team Lead (System)', file: path.join(PLUGIN_ROOT, 'templates', 'SYSTEM.md') },
+    { id: 'team-lead', name: 'Orchestrator (System)', file: path.join(PLUGIN_ROOT, 'templates', 'SYSTEM.md') },
     { id: 'worker', name: 'Worker', file: path.join(PLUGIN_ROOT, 'scripts', 'worker-prompt.md') },
-    { id: 'space-worker', name: 'Space Worker', file: path.join(PLUGIN_ROOT, 'scripts', 'space-worker-prompt.md') },
     { id: 'triage', name: 'Triage (Heartbeat)', file: path.join(PLUGIN_ROOT, 'scripts', 'triage-prompt.md') },
     { id: 'observer', name: 'Daily Observer', file: path.join(PLUGIN_ROOT, 'scripts', 'observer-prompt.md') },
-    { id: 'slack-worker', name: 'Slack Worker', file: path.join(PLUGIN_ROOT, 'scripts', 'slack-worker-prompt.md') },
   ];
 
   const result = prompts.map((p) => {
@@ -517,10 +515,8 @@ app.get('/api/prompts/:id', (req, res) => {
   const promptMap = {
     'team-lead': path.join(PLUGIN_ROOT, 'templates', 'SYSTEM.md'),
     'worker': path.join(PLUGIN_ROOT, 'scripts', 'worker-prompt.md'),
-    'space-worker': path.join(PLUGIN_ROOT, 'scripts', 'space-worker-prompt.md'),
     'triage': path.join(PLUGIN_ROOT, 'scripts', 'triage-prompt.md'),
     'observer': path.join(PLUGIN_ROOT, 'scripts', 'observer-prompt.md'),
-    'slack-worker': path.join(PLUGIN_ROOT, 'scripts', 'slack-worker-prompt.md'),
   };
 
   const filePath = promptMap[req.params.id];

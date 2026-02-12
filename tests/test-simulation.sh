@@ -633,9 +633,9 @@ else
   fail ".highwatermark not created"
 fi
 
-# Test 6.4: Template substitution in space-worker-prompt.md
-if [[ -f "$PLUGIN_ROOT/scripts/space-worker-prompt.md" ]]; then
-  SUBST_OUTPUT=$(sed "s|{{SPACE}}|simtest|g; s|{{CODE_DIR}}|$MOCK_CODE_DIR2|g" "$PLUGIN_ROOT/scripts/space-worker-prompt.md")
+# Test 6.4: Template substitution in worker-prompt.md
+if [[ -f "$PLUGIN_ROOT/scripts/worker-prompt.md" ]]; then
+  SUBST_OUTPUT=$(sed "s|{{SPACE}}|simtest|g; s|{{CODE_DIR}}|$MOCK_CODE_DIR2|g" "$PLUGIN_ROOT/scripts/worker-prompt.md")
   if echo "$SUBST_OUTPUT" | grep -q "simtest" && echo "$SUBST_OUTPUT" | grep -q "$MOCK_CODE_DIR2"; then
     if echo "$SUBST_OUTPUT" | grep -q "{{SPACE}}\|{{CODE_DIR}}"; then
       fail "template substitution left unreplaced placeholders"
@@ -646,12 +646,12 @@ if [[ -f "$PLUGIN_ROOT/scripts/space-worker-prompt.md" ]]; then
     fail "template substitution failed"
   fi
 else
-  fail "space-worker-prompt.md not found"
+  fail "worker-prompt.md not found"
 fi
 
 # Test 6.5: Worker prompt documents full docs tree and task format
-if [[ -f "$PLUGIN_ROOT/scripts/space-worker-prompt.md" ]]; then
-  PROMPT_CONTENT=$(cat "$PLUGIN_ROOT/scripts/space-worker-prompt.md")
+if [[ -f "$PLUGIN_ROOT/scripts/worker-prompt.md" ]]; then
+  PROMPT_CONTENT=$(cat "$PLUGIN_ROOT/scripts/worker-prompt.md")
   HAS_PLANS=$(echo "$PROMPT_CONTENT" | grep -c "docs/plans/" || true)
   HAS_RESEARCH=$(echo "$PROMPT_CONTENT" | grep -c "docs/research/" || true)
   HAS_DESIGN=$(echo "$PROMPT_CONTENT" | grep -c "docs/design/" || true)
@@ -663,7 +663,7 @@ if [[ -f "$PLUGIN_ROOT/scripts/space-worker-prompt.md" ]]; then
     fail "worker prompt missing docs tree ($HAS_PLANS/$HAS_RESEARCH/$HAS_DESIGN) or task format ($HAS_TASK_JSON) or decision tree ($HAS_DECISION)"
   fi
 else
-  fail "space-worker-prompt.md not found"
+  fail "worker-prompt.md not found"
 fi
 
 rm -rf "$MOCK_CODE_DIR2"
