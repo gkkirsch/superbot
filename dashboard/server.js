@@ -415,7 +415,9 @@ app.get('/api/spaces/:slug', (req, res) => {
   }
   const space = readJsonOr(path.join(spaceDir, 'space.json'), {});
   const overview = readFileOr(path.join(spaceDir, 'OVERVIEW.md'));
-  res.json({ space, overview });
+  const hasDashboard = fs.existsSync(path.join(spaceDir, 'dashboard.jsx'));
+  const hasApp = fs.existsSync(path.join(spaceDir, 'app'));
+  res.json({ space, overview, hasDashboard, hasApp });
 });
 
 // 3. All tasks for a space
@@ -483,6 +485,56 @@ app.get('/api/spaces/:slug/overview', (req, res) => {
     return res.status(400).json({ error: 'Invalid slug' });
   }
   res.json(readFileOr(path.join(SPACES_DIR, slug, 'OVERVIEW.md')));
+});
+
+// 7. Compile and serve space dashboard.jsx
+app.get('/api/spaces/:slug/dashboard', async (req, res) => {
+  const slug = sanitizeSlug(req.params.slug);
+  if (!slug || slug !== req.params.slug) {
+    return res.status(400).json({ error: 'Invalid slug' });
+  }
+  const dashboardPath = path.join(SPACES_DIR, slug, 'dashboard.jsx');
+  if (!fs.existsSync(dashboardPath)) {
+    return res.status(404).json({ error: 'No dashboard.jsx found' });
+  }
+  try {
+    const esbuild = require('esbuild');
+    const source = fs.readFileSync(dashboardPath, 'utf8');
+    const result = await esbuild.transform(source, {
+      loader: 'jsx',
+      format: 'esm',
+      target: 'es2020',
+    });
+    res.set('Content-Type', 'application/javascript');
+    res.send(result.code);
+  } catch (err) {
+    res.status(500).json({ error: 'Compilation failed', detail: err.message });
+  }
+});
+
+// 8. Serve space app/ static files
+app.get('/spaces/:slug/app/*', (req, res) => {
+  const slug = sanitizeSlug(req.params.slug);
+  if (!slug || slug !== req.params.slug) {
+    return res.status(400).send('Invalid slug');
+  }
+  const appDir = path.join(SPACES_DIR, slug, 'app');
+  if (!fs.existsSync(appDir)) {
+    return res.status(404).send('No app directory');
+  }
+  const filePath = req.params[0] || 'index.html';
+  if (filePath.includes('..')) {
+    return res.status(400).send('Invalid path');
+  }
+  const fullPath = path.join(appDir, filePath);
+  if (!path.resolve(fullPath).startsWith(path.resolve(appDir))) {
+    return res.status(400).send('Invalid path');
+  }
+  if (fs.existsSync(fullPath)) {
+    res.sendFile(fullPath);
+  } else {
+    res.status(404).send('Not found');
+  }
 });
 
 // ---------------------------------------------------------------------------
