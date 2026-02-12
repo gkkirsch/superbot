@@ -1,9 +1,0 @@
-{
-  "$schema": "https://ui.shadcn.com/schema.json",
-  "style": "default",
-  "rsc": false,
-  "tsx": false,
-  "alias": {
-    "@/components": "./src/components"
-  }
-}
