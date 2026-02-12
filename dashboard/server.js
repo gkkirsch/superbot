@@ -17,8 +17,8 @@ const SPACES_DIR = path.join(os.homedir(), '.superbot', 'spaces');
 const PORT = 3274;
 const app = express();
 
-// Path to Spaces React app build output
-const SPACES_UI_DIST = path.join(PLUGIN_ROOT, 'spaces-ui', 'dist');
+// Path to Dashboard React app build output
+const DASHBOARD_UI_DIST = path.join(PLUGIN_ROOT, 'dashboard-ui', 'dist');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -141,8 +141,8 @@ const ALLOWED_LOGS = ['heartbeat.log', 'slack-bot.log', 'scheduler.log', 'observ
 // ---------------------------------------------------------------------------
 
 // Serve React app at root
-if (fs.existsSync(SPACES_UI_DIST)) {
-  app.use(express.static(SPACES_UI_DIST, { redirect: false }));
+if (fs.existsSync(DASHBOARD_UI_DIST)) {
+  app.use(express.static(DASHBOARD_UI_DIST, { redirect: false }));
 }
 
 // Context files
@@ -686,9 +686,9 @@ app.get('/api/health', (_req, res) => {
 // SPA Catch-all (must be LAST)
 // ---------------------------------------------------------------------------
 
-if (fs.existsSync(SPACES_UI_DIST)) {
+if (fs.existsSync(DASHBOARD_UI_DIST)) {
   app.get('{*path}', (_req, res) => {
-    res.sendFile(path.join(SPACES_UI_DIST, 'index.html'));
+    res.sendFile(path.join(DASHBOARD_UI_DIST, 'index.html'));
   });
 }
 
