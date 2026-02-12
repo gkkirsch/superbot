@@ -194,6 +194,12 @@ while true; do
   # Assemble fresh context each iteration
   assemble_context
 
+  # Start dashboard server if not already running
+  if ! lsof -i :3274 &>/dev/null; then
+    node "$PLUGIN_ROOT/dashboard/server.js" &>/dev/null &
+    disown
+  fi
+
   # Start watchdog: monitors for restart flag, kills claude when found
   (
     while true; do
