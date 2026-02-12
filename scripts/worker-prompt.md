@@ -95,6 +95,8 @@ Every significant piece of work produces markdown in `docs/`. Name files by topi
 ~/.superbot/spaces/{{SPACE}}/
 ├── OVERVIEW.md          — goals, milestones, current phase
 ├── space.json           — metadata, codeDir, links
+├── dashboard.jsx        — optional: custom Dashboard tab (React component)
+├── app/                 — optional: standalone website/app
 ├── tasks/               — task backlog (JSON files)
 └── docs/                — all documentation, organized by topic
     ├── <topic>.md       — one file per topic (architecture, auth, api, etc.)
@@ -102,6 +104,69 @@ Every significant piece of work produces markdown in `docs/`. Name files by topi
     ├── research/        — investigation findings (date-prefixed)
     └── design/          — design specs (date-prefixed)
 ```
+
+## Space Dashboard & App
+
+You can create visual, user-facing content for a space in two ways:
+
+### dashboard.jsx — Native Dashboard Content
+
+Create `~/.superbot/spaces/{{SPACE}}/dashboard.jsx` to add a custom Dashboard tab to the space's detail page in the web UI. This is rendered natively inside the dashboard — it looks and feels like part of the app.
+
+**When to create one:**
+- Product/website spaces — show changelog, feature highlights, getting started guide
+- Research/planning spaces — visual summaries, comparison tables, key findings
+- Any space where the user would benefit from a visual overview
+
+**Don't create one for:** Quick one-off task spaces, spaces with only a couple of tasks.
+
+**Format:** Export a default React component that receives `{ space, tasks }` as props:
+
+```jsx
+export default function SpaceDashboard({ space, tasks }) {
+  const completed = tasks.filter(t => t.status === 'completed').length
+  const pending = tasks.filter(t => t.status === 'pending').length
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#d4cdc4', marginBottom: '12px' }}>
+          What's New
+        </h2>
+        <ul style={{ color: '#706b63', lineHeight: 1.8 }}>
+          <li>Added user authentication flow</li>
+          <li>Redesigned the landing page</li>
+        </ul>
+      </div>
+      <div style={{ display: 'flex', gap: '16px' }}>
+        <div style={{ padding: '16px', background: '#141414', borderRadius: '8px', border: '1px solid #1f1f1e' }}>
+          <div style={{ fontSize: '1.5rem', color: '#d4cdc4' }}>{completed}</div>
+          <div style={{ fontSize: '0.75rem', color: '#706b63' }}>Completed</div>
+        </div>
+        <div style={{ padding: '16px', background: '#141414', borderRadius: '8px', border: '1px solid #1f1f1e' }}>
+          <div style={{ fontSize: '1.5rem', color: '#d4cdc4' }}>{pending}</div>
+          <div style={{ fontSize: '0.75rem', color: '#706b63' }}>Pending</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+**Rules:**
+- Use inline styles (no CSS imports — the file is compiled in isolation)
+- Match the dark theme: background `#0a0a0a`, surface `#141414`, text `#d4cdc4`, muted `#706b63`, accent `#c4a882`, border `#1f1f1e`, red `#DC504A`, green `#8a9a7b`
+- Use `React.createElement` or JSX (both work — esbuild compiles JSX)
+- Props: `space` is the space.json data, `tasks` is the full task array
+- **Update dashboard.jsx** after every session where you ship notable work
+
+### app/ — Standalone Website
+
+For spaces building a full website or application, create it in `~/.superbot/spaces/{{SPACE}}/app/`. This is served by the dashboard server and linked from the space detail page.
+
+- Build the site however makes sense (plain HTML, Vite, etc.)
+- The dashboard links to it but doesn't embed it
+- Use `dashboard.jsx` as the companion — changelog, setup instructions, feature highlights
 
 ## Skills Reference
 
