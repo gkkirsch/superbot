@@ -26,6 +26,8 @@ export interface SpaceOverview {
 export interface SpaceDetail {
   space: SpaceOverview
   overview: { content: string; exists: boolean }
+  hasDashboard: boolean
+  hasApp: boolean
 }
 
 export interface Task {

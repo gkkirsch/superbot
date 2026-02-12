@@ -7,7 +7,8 @@ import { TaskList } from '@/features/TaskList'
 import { PlanViewer } from '@/features/PlanViewer'
 import { DocList } from '@/features/DocList'
 import { DocViewer } from '@/features/DocViewer'
-import { useSpace } from '@/hooks/useSpaces'
+import { SpaceDashboard } from '@/features/SpaceDashboard'
+import { useSpace, useSpaceTasks } from '@/hooks/useSpaces'
 import type { Task } from '@/lib/types'
 
 function DetailSkeleton() {
@@ -64,6 +65,7 @@ export function SpaceDetail() {
   }
 
   const space = data.space
+  const { data: tasks } = useSpaceTasks(slug ?? '')
 
   return (
     <div className="min-h-screen bg-ink">
@@ -118,15 +120,33 @@ export function SpaceDetail() {
                 Production
               </a>
             )}
+            {data.hasApp && (
+              <a
+                href={`/spaces/${space.slug}/app/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-sand hover:text-sand/80 transition-colors"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                App
+              </a>
+            )}
           </div>
         </header>
 
-        <Tabs defaultValue="tasks">
+        <Tabs defaultValue={data.hasDashboard ? "dashboard" : "tasks"}>
           <TabsList className="mb-6">
+            {data.hasDashboard && <TabsTrigger value="dashboard">Dashboard</TabsTrigger>}
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="docs">Docs</TabsTrigger>
           </TabsList>
+
+          {data.hasDashboard && (
+            <TabsContent value="dashboard">
+              <SpaceDashboard slug={slug ?? ''} space={space} tasks={tasks ?? []} />
+            </TabsContent>
+          )}
 
           <TabsContent value="tasks">
             <TaskList slug={slug ?? ''} />
