@@ -513,7 +513,7 @@ app.get('/api/spaces/:slug/dashboard', async (req, res) => {
 });
 
 // 8. Serve space app/ static files
-app.get('/spaces/:slug/app/*', (req, res) => {
+app.get('/spaces/:slug/app/*rest', (req, res) => {
   const slug = sanitizeSlug(req.params.slug);
   if (!slug || slug !== req.params.slug) {
     return res.status(400).send('Invalid slug');
@@ -522,7 +522,7 @@ app.get('/spaces/:slug/app/*', (req, res) => {
   if (!fs.existsSync(appDir)) {
     return res.status(404).send('No app directory');
   }
-  const filePath = req.params[0] || 'index.html';
+  const filePath = req.params.rest || 'index.html';
   if (filePath.includes('..')) {
     return res.status(400).send('Invalid path');
   }
