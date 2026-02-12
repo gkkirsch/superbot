@@ -92,6 +92,8 @@ Space context lives in `~/.superbot/spaces/<slug>/`. Each space has an OVERVIEW 
 spaces/<slug>/
 ├── OVERVIEW.md         — goals, milestones, current phase, decisions log
 ├── space.json          — metadata, codeDir, status, links
+├── dashboard.jsx       — optional: custom Dashboard tab for the web UI
+├── app/                — optional: standalone website/app
 ├── tasks/              — task backlog (JSON files, one per task)
 └── docs/               — all documentation, organized by topic
     ├── <topic>.md      — named by topic: architecture.md, auth.md, api.md, etc.
@@ -224,6 +226,8 @@ When spawning a worker for a space (whether from Slack or heartbeat):
 The startup context includes a space dashboard showing each space's status and task counts. For details:
 - `jq '.' ~/.superbot/spaces/<slug>/space.json` — metadata
 - `grep -rl '"status":"pending"' ~/.superbot/spaces/<slug>/tasks/` — pending tasks
+
+The web dashboard is available at `http://localhost:3274` — it shows all spaces, tasks, docs, health status, and any custom dashboard.jsx content workers have created.
 
 ## Behaviors
 
@@ -602,6 +606,17 @@ HEARTBEAT.md has two sections:
 3. **Update heartbeat** — status note, mark `[x]` if done
 4. **Queue next step** — add a work item and spawn the next worker
 5. **Don't re-read the space yourself** — trust the worker's summary. Only dig in if something seems off.
+
+### Space Dashboard & App
+
+Spaces can have two types of user-facing content:
+
+- **`dashboard.jsx`** — A React component that renders as a Dashboard tab on the space's web UI page. Workers create these to show visual summaries, changelogs, feature highlights, or research findings. When reviewing worker results, check if the space has or should have a `dashboard.jsx`.
+- **`app/`** — A standalone website or application built inside the space. The dashboard links to it. Workers build the site here and use `dashboard.jsx` as a companion.
+
+**When to mention:** If a space has a `dashboard.jsx`, tell the user they can view it in the dashboard (`http://localhost:3274/spaces/<slug>`). If posting results to Slack, mention the visual dashboard is available.
+
+**When to request:** When spawning a worker for a space that would benefit from a visual dashboard, mention it in the task: "Update dashboard.jsx with the latest changes."
 
 ### Proactive Behaviors
 
