@@ -53,14 +53,14 @@ export function SpaceCard({ space, style }: SpaceCardProps) {
           <StatusBadge status={space.status as Task['status']} />
         </div>
 
-        {(space.tags.length > 0 || space.techStack.length > 0) && (
+        {((space.tags?.length ?? 0) > 0 || (space.techStack?.length ?? 0) > 0) && (
           <div className="flex flex-wrap gap-1.5">
-            {space.tags.map((tag) => (
+            {(space.tags ?? []).map((tag) => (
               <Badge key={`tag-${tag}`} variant="outline" className="text-[10px] px-1.5 py-0">
                 {tag}
               </Badge>
             ))}
-            {space.techStack.map((tech) => (
+            {(space.techStack ?? []).map((tech) => (
               <Badge key={`tech-${tech}`} variant="secondary" className="text-[10px] px-1.5 py-0">
                 {tech}
               </Badge>

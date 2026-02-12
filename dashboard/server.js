@@ -365,7 +365,7 @@ app.get('/api/spaces', (_req, res) => {
   try {
     if (!fs.existsSync(SPACES_DIR)) return res.json({ spaces: [] });
     const dirs = fs.readdirSync(SPACES_DIR, { withFileTypes: true })
-      .filter(e => e.isDirectory());
+      .filter(e => e.isDirectory() && fs.existsSync(path.join(SPACES_DIR, e.name, 'space.json')));
     const spaces = dirs.map(d => {
       const spaceDir = path.join(SPACES_DIR, d.name);
       const spaceJson = readJsonOr(path.join(spaceDir, 'space.json'), {});

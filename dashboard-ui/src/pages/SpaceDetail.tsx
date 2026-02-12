@@ -36,6 +36,7 @@ function DetailSkeleton() {
 export function SpaceDetail() {
   const { slug } = useParams<{ slug: string }>()
   const { data, isLoading, error } = useSpace(slug ?? '')
+  const { data: tasks } = useSpaceTasks(slug ?? '')
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null)
 
   if (isLoading) {
@@ -65,7 +66,6 @@ export function SpaceDetail() {
   }
 
   const space = data.space
-  const { data: tasks } = useSpaceTasks(slug ?? '')
 
   return (
     <div className="min-h-screen bg-ink">
