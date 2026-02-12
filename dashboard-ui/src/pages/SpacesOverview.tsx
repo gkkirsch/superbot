@@ -15,7 +15,7 @@ function groupByStatus(spaces: SpaceOverviewType[]): { label: string; spaces: Sp
   const groups: Record<string, SpaceOverviewType[]> = {}
 
   for (const space of spaces) {
-    const status = space.status.toLowerCase()
+    const status = (space.status || 'active').toLowerCase()
     const key = statusOrder[status] !== undefined ? status : 'other'
     if (!groups[key]) groups[key] = []
     groups[key].push(space)
