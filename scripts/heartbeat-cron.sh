@@ -15,6 +15,9 @@ if [[ ! -f "$TEAM_DIR/config.json" ]]; then
   exit 0
 fi
 
+# Clean up stale worker sessions (active but no running process)
+"$PLUGIN_ROOT/scripts/worker-status.sh" --fix >> "$DIR/logs/heartbeat.log" 2>&1
+
 # Run daily observer (parses recent session, appends to daily notes)
 "$PLUGIN_ROOT/scripts/daily-observer.sh" 2>> "$DIR/logs/heartbeat.log"
 

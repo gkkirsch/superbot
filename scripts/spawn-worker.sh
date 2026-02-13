@@ -17,6 +17,7 @@ CONFIG="$HOME/.superbot/config.json"
 DIR="$HOME/.superbot"
 SESSIONS="$DIR/sessions.json"
 INBOX="$HOME/.claude/teams/superbot/inboxes/team-lead.json"
+LOGS_DIR="$DIR/logs"
 
 if [[ ! -f "$CONFIG" ]]; then
   echo "Error: config.json not found. Run setup first." >&2
@@ -82,6 +83,52 @@ if [[ ! -f "$SESSIONS" ]]; then
   echo '{"sessions":[]}' > "$SESSIONS"
 fi
 
+mkdir -p "$LOGS_DIR"
+
+# ---------------------------------------------------------------------------
+# Helper: update a session field atomically
+# Usage: update_session <session_id> <jq_expression>
+# ---------------------------------------------------------------------------
+update_session() {
+  local sid="$1" expr="$2"
+  jq --arg id "$sid" "$expr" "$SESSIONS" > "$SESSIONS.tmp" && mv "$SESSIONS.tmp" "$SESSIONS"
+}
+
+# ---------------------------------------------------------------------------
+# Helper: finalize a session (runs inside the subshell after claude exits)
+# Sets status to completed/failed, records exit code and timestamps
+# ---------------------------------------------------------------------------
+finalize_session() {
+  local sid="$1" exit_code="$2" worker_name="$3" result="$4"
+  local now
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+  local status="completed"
+  if [[ "$exit_code" -ne 0 || -z "$result" ]]; then
+    status="failed"
+  fi
+
+  jq --arg id "$sid" --arg now "$now" --arg st "$status" --argjson ec "$exit_code" \
+    '(.sessions[] | select(.id == $id)) |= . + {status: $st, lastActiveAt: $now, completedAt: $now, exitCode: $ec, pid: null}' \
+    "$SESSIONS" > "$SESSIONS.tmp" && mv "$SESSIONS.tmp" "$SESSIONS"
+}
+
+# ---------------------------------------------------------------------------
+# Helper: deliver result to team-lead inbox
+# ---------------------------------------------------------------------------
+deliver_result() {
+  local worker_name="$1" result="$2" label="$3" summary="$4"
+  local ts
+  ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+  jq --arg from "$worker_name" \
+     --arg text "[Worker result] $label"$'\n\n'"$result" \
+     --arg summary "$summary" \
+     --arg ts "$ts" \
+    '. += [{from: $from, text: $text, summary: $summary, timestamp: $ts, read: false}]' \
+    "$INBOX" > "$INBOX.tmp" && mv "$INBOX.tmp" "$INBOX"
+}
+
 # Check for existing session on this thread (only if we have a thread)
 EXISTING=""
 if [[ -n "$MESSAGE_TS" ]]; then
@@ -92,8 +139,11 @@ if [[ -n "$EXISTING" ]]; then
   # Resume existing session
   SESSION_ID="$EXISTING"
   NAME=$(jq -r '.sessions[] | select(.id == "'"$SESSION_ID"'") | .name' "$SESSIONS")
+  LOG_FILE="$LOGS_DIR/worker-${NAME}.log"
 
   (
+    echo "[$(date)] Resuming session $SESSION_ID for $NAME (space: $SLUG)" >> "$LOG_FILE"
+
     SESS_SPACE=$(jq -r '.sessions[] | select(.id == "'"$SESSION_ID"'") | .space // empty' "$SESSIONS")
     if [[ -n "$SESS_SPACE" ]]; then
       SESS_CODE_DIR=$(jq -r '.codeDir // empty' "$DIR/spaces/$SESS_SPACE/space.json")
@@ -101,45 +151,52 @@ if [[ -n "$EXISTING" ]]; then
       [[ -n "$SESS_CODE_DIR" && -d "$SESS_CODE_DIR" ]] && cd "$SESS_CODE_DIR"
     fi
 
+    EXIT_CODE=0
     OUTPUT=$(claude -p "$MESSAGE" \
       --resume "$SESSION_ID" \
       --output-format json \
-      --dangerously-skip-permissions 2>&1)
+      --dangerously-skip-permissions 2>&1) || EXIT_CODE=$?
 
     RESULT=$(echo "$OUTPUT" | jq -r '.result // empty' 2>/dev/null)
 
-    jq --arg id "$SESSION_ID" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-      '(.sessions[] | select(.id == $id)).lastActiveAt = $now' \
-      "$SESSIONS" > "$SESSIONS.tmp" && mv "$SESSIONS.tmp" "$SESSIONS"
+    echo "[$(date)] Worker exited with code $EXIT_CODE" >> "$LOG_FILE"
+    if [[ -z "$RESULT" ]]; then
+      echo "[$(date)] WARNING: No result extracted. Raw output:" >> "$LOG_FILE"
+      echo "$OUTPUT" | tail -20 >> "$LOG_FILE"
+    fi
+
+    # Mark session completed/failed
+    finalize_session "$SESSION_ID" "$EXIT_CODE" "$NAME" "$RESULT"
 
     if [[ -n "$RESULT" ]]; then
       LABEL="Space: $SLUG"
       [[ -n "$CHANNEL" ]] && LABEL+=" — Channel: $CHANNEL, thread: $MESSAGE_TS"
-      jq --arg from "$NAME" \
-         --arg text "[Worker result] $LABEL"$'\n\n'"$RESULT" \
-         --arg summary "Worker $NAME replied" \
-         --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-        '. += [{from: $from, text: $text, summary: $summary, timestamp: $ts, read: false}]' \
-        "$INBOX" > "$INBOX.tmp" && mv "$INBOX.tmp" "$INBOX"
+      deliver_result "$NAME" "$RESULT" "$LABEL" "Worker $NAME replied"
+      echo "[$(date)] Result delivered to inbox" >> "$LOG_FILE"
     fi
   ) &
+  WORKER_PID=$!
+
+  # Record PID in session
+  update_session "$SESSION_ID" '(.sessions[] | select(.id == $id)).pid = '"$WORKER_PID"
 
 else
   # New session
   SESSION_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
   NAME="${NAME:-${SLUG}-$(date +%s | tail -c 5)}"
+  LOG_FILE="$LOGS_DIR/worker-${NAME}.log"
 
   # Register session
   NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   if [[ -n "$CHANNEL" && -n "$MESSAGE_TS" ]]; then
     jq --arg id "$SESSION_ID" --arg name "$NAME" \
        --arg space "$SLUG" --arg ch "$CHANNEL" --arg ts "$MESSAGE_TS" --arg now "$NOW" \
-      '.sessions += [{id:$id, name:$name, type:"space", status:"active", space:$space, slackThread:{channel:$ch, ts:$ts}, createdAt:$now, lastActiveAt:$now}]' \
+      '.sessions += [{id:$id, name:$name, type:"space", status:"active", space:$space, slackThread:{channel:$ch, ts:$ts}, createdAt:$now, lastActiveAt:$now, pid:null}]' \
       "$SESSIONS" > "$SESSIONS.tmp" && mv "$SESSIONS.tmp" "$SESSIONS"
   else
     jq --arg id "$SESSION_ID" --arg name "$NAME" \
        --arg space "$SLUG" --arg now "$NOW" \
-      '.sessions += [{id:$id, name:$name, type:"space", status:"active", space:$space, slackThread:null, createdAt:$now, lastActiveAt:$now}]' \
+      '.sessions += [{id:$id, name:$name, type:"space", status:"active", space:$space, slackThread:null, createdAt:$now, lastActiveAt:$now, pid:null}]' \
       "$SESSIONS" > "$SESSIONS.tmp" && mv "$SESSIONS.tmp" "$SESSIONS"
   fi
 
@@ -151,32 +208,45 @@ else
   fi
 
   (
+    echo "[$(date)] Starting session $SESSION_ID for $NAME (space: $SLUG, model: $MODEL)" >> "$LOG_FILE"
+    echo "[$(date)] Message: ${MESSAGE:0:200}" >> "$LOG_FILE"
+
     [[ -n "$WORK_DIR" ]] && cd "$WORK_DIR"
 
+    EXIT_CODE=0
     OUTPUT=$(claude -p "$MESSAGE" \
       --session-id "$SESSION_ID" \
       --system-prompt "$SYSTEM_PROMPT" \
       --model "$MODEL" \
       --output-format json \
-      --dangerously-skip-permissions 2>&1)
+      --dangerously-skip-permissions 2>&1) || EXIT_CODE=$?
 
     RESULT=$(echo "$OUTPUT" | jq -r '.result // empty' 2>/dev/null)
 
-    jq --arg id "$SESSION_ID" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-      '(.sessions[] | select(.id == $id)).lastActiveAt = $now' \
-      "$SESSIONS" > "$SESSIONS.tmp" && mv "$SESSIONS.tmp" "$SESSIONS"
+    echo "[$(date)] Worker exited with code $EXIT_CODE" >> "$LOG_FILE"
+    if [[ -z "$RESULT" ]]; then
+      echo "[$(date)] WARNING: No result extracted. Raw output:" >> "$LOG_FILE"
+      echo "$OUTPUT" | tail -20 >> "$LOG_FILE"
+    else
+      echo "[$(date)] Result length: ${#RESULT} chars" >> "$LOG_FILE"
+    fi
+
+    # Mark session completed/failed
+    finalize_session "$SESSION_ID" "$EXIT_CODE" "$NAME" "$RESULT"
 
     if [[ -n "$RESULT" ]]; then
       LABEL="Space: $SLUG"
       [[ -n "$CHANNEL" ]] && LABEL+=" — Channel: $CHANNEL, thread: $MESSAGE_TS"
-      jq --arg from "$NAME" \
-         --arg text "[Worker result] $LABEL"$'\n\n'"$RESULT" \
-         --arg summary "Worker $NAME finished" \
-         --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-        '. += [{from: $from, text: $text, summary: $summary, timestamp: $ts, read: false}]' \
-        "$INBOX" > "$INBOX.tmp" && mv "$INBOX.tmp" "$INBOX"
+      deliver_result "$NAME" "$RESULT" "$LABEL" "Worker $NAME finished"
+      echo "[$(date)] Result delivered to inbox" >> "$LOG_FILE"
     fi
   ) &
+  WORKER_PID=$!
+
+  # Record PID in session
+  update_session "$SESSION_ID" '(.sessions[] | select(.id == $id)).pid = '"$WORKER_PID"
+
+  echo "[$(date)] Spawned worker PID $WORKER_PID" >> "$LOG_FILE"
 fi
 
 echo "$NAME $SESSION_ID"
