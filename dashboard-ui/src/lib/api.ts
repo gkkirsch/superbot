@@ -1,4 +1,4 @@
-import type { SpaceOverview, SpaceDetail, Task, DocFile } from './types'
+import type { SpaceOverview, SpaceDetail, Task, DocFile, Decision } from './types'
 
 const API_BASE = '/api'
 
@@ -181,4 +181,28 @@ export async function fetchPromptContent(id: string): Promise<PromptDetail> {
 
 export async function fetchDocsPage(slug: string): Promise<{ content: string; exists: boolean }> {
   return fetchJson<{ content: string; exists: boolean }>(`/docs/${slug}`)
+}
+
+// --- Decisions ---
+
+export async function fetchDecisions(status?: string): Promise<Decision[]> {
+  const qs = status ? `?status=${status}` : ''
+  const data = await fetchJson<{ decisions: Decision[] }>(`/decisions${qs}`)
+  return data.decisions
+}
+
+export async function resolveDecision(id: number, resolution: string, space?: string | null): Promise<Decision> {
+  const response = await fetch(`${API_BASE}/decisions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'resolved', resolution, space: space || undefined }),
+  })
+  if (!response.ok) throw new Error(`API error: ${response.status}`)
+  return response.json()
+}
+
+export async function fetchSpaceDecisions(slug: string, status?: string): Promise<Decision[]> {
+  const qs = status ? `?status=${status}` : ''
+  const data = await fetchJson<{ decisions: Decision[] }>(`/spaces/${slug}/decisions${qs}`)
+  return data.decisions
 }

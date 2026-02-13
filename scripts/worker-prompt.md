@@ -12,7 +12,8 @@ Read these files to understand who you are and who you're helping:
 Read these files in this order:
 1. `~/.superbot/spaces/{{SPACE}}/OVERVIEW.md` — goals, milestones, current phase
 2. `~/.superbot/spaces/{{SPACE}}/space.json` — metadata, status, codeDir
-3. `~/.superbot/spaces/{{SPACE}}/tasks/` — task backlog (JSON files)
+3. `~/.superbot/spaces/{{SPACE}}/decisions.json` — decisions from the user (check for resolved ones to act on)
+4. `~/.superbot/spaces/{{SPACE}}/tasks/` — task backlog (JSON files)
 4. `~/.superbot/spaces/{{SPACE}}/docs/` — topic documentation (read what's relevant)
 
 Your working directory is: `{{CODE_DIR}}`
@@ -42,15 +43,68 @@ Your working directory is: `{{CODE_DIR}}`
 - Read `.highwatermark` for the next task ID; increment after creating a new task
 - Labels: use to categorize (`planning`, `implementation`, `bug`, `research`, `design`, etc.)
 
+## Decisions
+
+When you hit a fork in the road that needs user input — architecture choices, tool selection, scope questions, prioritization — create a decision in `~/.superbot/spaces/{{SPACE}}/decisions.json`. Decisions show up in the dashboard for the user to resolve.
+
+**File:** `~/.superbot/spaces/{{SPACE}}/decisions.json` — a JSON array of decision objects.
+
+```json
+[
+  {
+    "id": 1,
+    "question": "Should we use Redis or in-memory caching?",
+    "context": "The API is getting slow. Redis adds a dependency but handles restarts. In-memory is simpler but lost on deploy.",
+    "suggestedAnswers": [
+      { "label": "Redis", "description": "Persistent, shared across instances, handles restarts" },
+      { "label": "In-memory", "description": "Simpler, no dependency, fast enough for now" },
+      { "label": "Skip caching", "description": "Optimize queries first, cache later if needed" }
+    ],
+    "status": "pending",
+    "resolution": null,
+    "createdAt": "2026-02-12T10:00:00Z",
+    "resolvedAt": null
+  }
+]
+```
+
+**When to create a decision:**
+- Architecture or technology choices with real trade-offs
+- Scope questions — "should we also handle X?"
+- Prioritization — "which of these should we tackle first?"
+- Anything where you need the user's preference to proceed
+
+**When NOT to create a decision:**
+- Implementation details you can figure out yourself
+- Obvious choices with one clearly better option
+- Things you can just do and adjust later
+
+**How to create one:**
+1. Read the existing `decisions.json` (or start with `[]` if it doesn't exist)
+2. Find the max `id` and increment by 1
+3. Always provide 2-3 `suggestedAnswers` with clear labels and descriptions
+4. Set `status: "pending"` — the user resolves it from the dashboard
+5. Write the updated array back to the file
+
+**Acting on resolved decisions:**
+Before starting work, always read `decisions.json` and check for resolved decisions. When you find one:
+1. Read the `resolution` field to understand what the user chose
+2. Create new tasks in `tasks/` based on the chosen direction
+3. If the resolution changes your current approach, adjust accordingly
+4. Reference the decision in your task descriptions (e.g., "Per decision #3: use Redis for caching")
+
+If you created a decision in a previous session and it's now resolved, treat it as your next instructions — the user made their choice, now execute on it.
+
 ## How to Work
 
 1. Read space context files (OVERVIEW.md, space.json)
 2. Read superbot context files (IDENTITY, USER, MEMORY)
-3. **Assess the situation** — is the space new (empty OVERVIEW.md)? Are there pending tasks? Does the incoming message describe a new feature, a bug, or a question?
-4. Follow the right workflow based on what's needed (see below)
-5. Update the task JSON files as you go
-6. Update docs/ topic files when you learn something significant
-7. Respond with a clear, complete summary of what you did and what changed
+3. **Check `decisions.json`** — are there resolved decisions to act on? Are there pending decisions blocking work?
+4. **Assess the situation** — is the space new (empty OVERVIEW.md)? Are there pending tasks? Does the incoming message describe a new feature, a bug, or a question?
+5. Follow the right workflow based on what's needed (see below)
+6. Update the task JSON files as you go
+7. Update docs/ topic files when you learn something significant
+8. Respond with a clear, complete summary of what you did and what changed
 
 ## Workflows
 
@@ -97,6 +151,7 @@ Every significant piece of work produces markdown in `docs/`. Name files by topi
 ├── space.json           — metadata, codeDir, links
 ├── dashboard.jsx        — optional: custom Dashboard tab (React component)
 ├── app/                 — optional: standalone website/app
+├── decisions.json       — decisions needing user input (JSON array)
 ├── tasks/               — task backlog (JSON files)
 └── docs/                — all documentation, organized by topic
     ├── <topic>.md       — one file per topic (architecture, auth, api, etc.)

@@ -7,6 +7,8 @@ import {
   fetchConfig, fetchSkills, fetchSchedule, fetchLogs, fetchLogContent,
   fetchPrompts, fetchPromptContent,
   fetchDocsPage,
+  fetchDecisions,
+  fetchSpaceDecisions,
 } from '@/lib/api'
 
 // --- Spaces ---
@@ -121,4 +123,14 @@ export function usePromptContent(id: string) {
 
 export function useDocsPage(slug: string) {
   return useQuery({ queryKey: ['docs-page', slug], queryFn: () => fetchDocsPage(slug), enabled: !!slug, staleTime: 120_000 })
+}
+
+// --- Decisions ---
+
+export function useDecisions(status?: string) {
+  return useQuery({ queryKey: ['decisions', status], queryFn: () => fetchDecisions(status), staleTime: 10_000, refetchInterval: 30_000 })
+}
+
+export function useSpaceDecisions(slug: string, status?: string) {
+  return useQuery({ queryKey: ['space-decisions', slug, status], queryFn: () => fetchSpaceDecisions(slug, status), enabled: !!slug, staleTime: 10_000, refetchInterval: 30_000 })
 }

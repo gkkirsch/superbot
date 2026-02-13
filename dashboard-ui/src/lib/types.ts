@@ -50,3 +50,20 @@ export interface DocFile {
   size: number
   modified: string
 }
+
+export interface DecisionAnswer {
+  label: string
+  description: string
+}
+
+export interface Decision {
+  id: number
+  question: string
+  context: string
+  space: string | null
+  suggestedAnswers: DecisionAnswer[]
+  status: 'pending' | 'resolved'
+  resolution: string | null
+  createdAt: string
+  resolvedAt: string | null
+}

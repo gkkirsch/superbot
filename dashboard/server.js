@@ -13,9 +13,12 @@ const TEAM_DIR = path.join(os.homedir(), '.claude', 'teams', 'superbot');
 const SKILLS_DIR = path.join(os.homedir(), '.claude', 'skills');
 const TASKS_DIR = path.join(os.homedir(), '.claude', 'tasks');
 const SPACES_DIR = path.join(os.homedir(), '.superbot', 'spaces');
+// Decisions now live per-space in ~/.superbot/spaces/<slug>/decisions.json
 
 const PORT = 3274;
 const app = express();
+
+app.use(express.json());
 
 // Path to Dashboard React app build output
 const DASHBOARD_UI_DIST = path.join(PLUGIN_ROOT, 'dashboard-ui', 'dist');
@@ -69,6 +72,37 @@ function redactTokens(obj) {
 
 function sanitizeSlug(slug) {
   return slug.replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+// ---------------------------------------------------------------------------
+// Decisions helpers (per-space storage)
+// ---------------------------------------------------------------------------
+
+function getSpaceDecisionsPath(slug) {
+  return path.join(SPACES_DIR, slug, 'decisions.json');
+}
+
+function readSpaceDecisions(slug) {
+  return readJsonOr(getSpaceDecisionsPath(slug), []).map(d => ({ ...d, space: slug }));
+}
+
+function readAllDecisions() {
+  if (!fs.existsSync(SPACES_DIR)) return [];
+  const dirs = fs.readdirSync(SPACES_DIR, { withFileTypes: true })
+    .filter(e => e.isDirectory() && fs.existsSync(path.join(SPACES_DIR, e.name, 'space.json')));
+  const all = [];
+  for (const d of dirs) {
+    all.push(...readSpaceDecisions(d.name));
+  }
+  // Sort by createdAt descending (newest first)
+  all.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  return all;
+}
+
+function writeSpaceDecisions(slug, decisions) {
+  // Strip the space field before writing (it's inferred from the directory)
+  const cleaned = decisions.map(({ space, ...rest }) => rest);
+  fs.writeFileSync(getSpaceDecisionsPath(slug), JSON.stringify(cleaned, null, 2));
 }
 
 // Recursively count .md files in a directory
@@ -344,6 +378,10 @@ app.get('/api/status', (_req, res) => {
     launchdRunning = out.includes('com.claude.superbot-heartbeat');
   } catch (_) {}
 
+  // Pending decisions (aggregated from all spaces)
+  const allDecisions = readAllDecisions();
+  const pendingDecisions = allDecisions.filter(d => d.status === 'pending').length;
+
   res.json({
     fileChecks,
     dailyCount,
@@ -351,6 +389,7 @@ app.get('/api/status', (_req, res) => {
     totalSessions: (sessions.sessions || []).length,
     pendingTasks,
     totalUnread,
+    pendingDecisions,
     launchdRunning,
     timestamp: new Date().toISOString(),
   });
@@ -732,6 +771,93 @@ app.get('/api/health', (_req, res) => {
     checks,
     timestamp: new Date().toISOString(),
   });
+});
+
+// ---------------------------------------------------------------------------
+// Decisions API
+// ---------------------------------------------------------------------------
+
+// List all decisions (aggregated from all spaces)
+app.get('/api/decisions', (req, res) => {
+  const all = readAllDecisions();
+  const status = req.query.status;
+  const space = req.query.space;
+  let filtered = all;
+  if (status) filtered = filtered.filter(d => d.status === status);
+  if (space) filtered = filtered.filter(d => d.space === space);
+  res.json({ decisions: filtered });
+});
+
+// List decisions for a specific space
+app.get('/api/spaces/:slug/decisions', (req, res) => {
+  const slug = sanitizeSlug(req.params.slug);
+  if (!slug || slug !== req.params.slug) {
+    return res.status(400).json({ error: 'Invalid slug' });
+  }
+  const decisions = readSpaceDecisions(slug);
+  const status = req.query.status;
+  const filtered = status ? decisions.filter(d => d.status === status) : decisions;
+  res.json({ decisions: filtered });
+});
+
+// Create a decision in a space
+app.post('/api/decisions', (req, res) => {
+  const { question, context, space, suggestedAnswers } = req.body;
+  if (!question) {
+    return res.status(400).json({ error: 'question is required' });
+  }
+  if (!space) {
+    return res.status(400).json({ error: 'space is required' });
+  }
+  const slug = sanitizeSlug(space);
+  if (!slug || !fs.existsSync(path.join(SPACES_DIR, slug, 'space.json'))) {
+    return res.status(400).json({ error: `space '${space}' not found` });
+  }
+
+  const decisions = readJsonOr(getSpaceDecisionsPath(slug), []);
+  const maxId = decisions.reduce((max, d) => Math.max(max, d.id || 0), 0);
+  const decision = {
+    id: maxId + 1,
+    question,
+    context: context || '',
+    suggestedAnswers: suggestedAnswers || [],
+    status: 'pending',
+    resolution: null,
+    createdAt: new Date().toISOString(),
+    resolvedAt: null,
+  };
+  decisions.push(decision);
+  writeSpaceDecisions(slug, decisions);
+  res.status(201).json({ ...decision, space: slug });
+});
+
+// Resolve a decision (search across all spaces)
+app.patch('/api/decisions/:id', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const targetSpace = req.body.space; // optional hint
+
+  // Find which space has this decision
+  const spaceSlugs = targetSpace
+    ? [sanitizeSlug(targetSpace)]
+    : fs.readdirSync(SPACES_DIR, { withFileTypes: true })
+        .filter(e => e.isDirectory() && fs.existsSync(path.join(SPACES_DIR, e.name, 'space.json')))
+        .map(e => e.name);
+
+  for (const slug of spaceSlugs) {
+    const decisions = readJsonOr(getSpaceDecisionsPath(slug), []);
+    const idx = decisions.findIndex(d => d.id === id);
+    if (idx !== -1) {
+      const { status, resolution } = req.body;
+      if (status) decisions[idx].status = status;
+      if (resolution !== undefined) decisions[idx].resolution = resolution;
+      if (status === 'resolved') {
+        decisions[idx].resolvedAt = new Date().toISOString();
+      }
+      writeSpaceDecisions(slug, decisions);
+      return res.json({ ...decisions[idx], space: slug });
+    }
+  }
+  res.status(404).json({ error: 'Decision not found' });
 });
 
 // ---------------------------------------------------------------------------

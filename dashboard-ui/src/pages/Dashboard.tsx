@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   CheckCircle2, AlertTriangle, XCircle, Circle, Loader2,
   ArrowRight, User, Brain, BookHeart, Clock, CalendarClock,
+  MessageCircleQuestion, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { useSpaces, useHeartbeat, useSchedule } from '@/hooks/useSpaces'
+import { useSpaces, useHeartbeat, useSchedule, useDecisions } from '@/hooks/useSpaces'
 import { SpaceCard } from '@/features/SpaceCard'
+import { DecisionCard } from '@/features/DecisionCard'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import type { SpaceOverview } from '@/lib/types'
 
@@ -242,6 +245,44 @@ function ScheduleSection() {
   )
 }
 
+// --- Decisions section ---
+
+function DecisionsSection() {
+  const { data: decisions, isLoading } = useDecisions('pending')
+  const [showAll, setShowAll] = useState(false)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="h-16 rounded-lg bg-sand/5 animate-pulse" />
+        ))}
+      </div>
+    )
+  }
+
+  if (!decisions || decisions.length === 0) return null
+
+  const visible = showAll ? decisions : decisions.slice(0, 3)
+
+  return (
+    <div className="space-y-3">
+      {visible.map((d) => (
+        <DecisionCard key={d.id} decision={d} />
+      ))}
+      {decisions.length > 3 && (
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="text-xs text-stone hover:text-sand transition-colors flex items-center gap-1 mx-auto"
+        >
+          {showAll ? 'Show fewer' : `Show all ${decisions.length} decisions`}
+          {showAll ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        </button>
+      )}
+    </div>
+  )
+}
+
 // --- Section header ---
 
 function SectionHeader({ title, icon: Icon, linkTo, linkLabel }: {
@@ -281,6 +322,15 @@ export function Dashboard() {
         <div className="mb-10">
           <HealthStrip />
         </div>
+
+        {/* Decisions — needs your input */}
+        <section className="mb-12" data-section="decisions">
+          <SectionHeader
+            title="Decisions"
+            icon={MessageCircleQuestion}
+          />
+          <DecisionsSection />
+        </section>
 
         {/* Spaces */}
         <section className="mb-12">

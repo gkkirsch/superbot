@@ -8,7 +8,8 @@ import { PlanViewer } from '@/features/PlanViewer'
 import { DocList } from '@/features/DocList'
 import { DocViewer } from '@/features/DocViewer'
 import { SpaceDashboard } from '@/features/SpaceDashboard'
-import { useSpace, useSpaceTasks } from '@/hooks/useSpaces'
+import { DecisionCard } from '@/features/DecisionCard'
+import { useSpace, useSpaceTasks, useSpaceDecisions } from '@/hooks/useSpaces'
 import type { Task } from '@/lib/types'
 
 function DetailSkeleton() {
@@ -37,6 +38,7 @@ export function SpaceDetail() {
   const { slug } = useParams<{ slug: string }>()
   const { data, isLoading, error } = useSpace(slug ?? '')
   const { data: tasks } = useSpaceTasks(slug ?? '')
+  const { data: decisions } = useSpaceDecisions(slug ?? '')
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null)
 
   if (isLoading) {
@@ -138,6 +140,16 @@ export function SpaceDetail() {
           <TabsList className="mb-6">
             {data.hasDashboard && <TabsTrigger value="dashboard">Dashboard</TabsTrigger>}
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            {decisions && decisions.length > 0 && (
+              <TabsTrigger value="decisions">
+                Decisions
+                {decisions.filter(d => d.status === 'pending').length > 0 && (
+                  <span className="ml-1.5 text-[10px] bg-sand/20 text-sand rounded-full px-1.5 py-0.5">
+                    {decisions.filter(d => d.status === 'pending').length}
+                  </span>
+                )}
+              </TabsTrigger>
+            )}
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="docs">Docs</TabsTrigger>
           </TabsList>
@@ -151,6 +163,16 @@ export function SpaceDetail() {
           <TabsContent value="tasks">
             <TaskList slug={slug ?? ''} />
           </TabsContent>
+
+          {decisions && decisions.length > 0 && (
+            <TabsContent value="decisions">
+              <div className="space-y-3">
+                {decisions.map((d) => (
+                  <DecisionCard key={d.id} decision={d} showSpace={false} />
+                ))}
+              </div>
+            </TabsContent>
+          )}
 
           <TabsContent value="overview">
             <PlanViewer slug={slug ?? ''} />

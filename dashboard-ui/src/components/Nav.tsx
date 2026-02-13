@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { NavLink, Link, useLocation } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, MessageCircleQuestion } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { topNavItems } from '@/lib/navigation'
+import { useDecisions } from '@/hooks/useSpaces'
 
 function useHealthStatus() {
   return useQuery({
@@ -49,6 +50,35 @@ function HealthDot() {
   )
 }
 
+function DecisionsBadge() {
+  const { data: decisions } = useDecisions('pending')
+  const count = decisions?.length ?? 0
+
+  if (count === 0) return null
+
+  return (
+    <Link
+      to="/#decisions"
+      onClick={() => {
+        // Scroll to decisions section on dashboard
+        setTimeout(() => {
+          document.querySelector('[data-section="decisions"]')?.scrollIntoView({ behavior: 'smooth' })
+        }, 100)
+      }}
+      className="relative flex items-center gap-1.5 text-xs text-sand hover:text-sand/80 transition-colors"
+      title={`${count} decision${count !== 1 ? 's' : ''} waiting`}
+    >
+      <span className="relative">
+        <MessageCircleQuestion className="h-4 w-4" />
+        <span className="absolute -top-1.5 -right-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-sand text-[9px] font-bold text-ink px-0.5">
+          {count}
+        </span>
+      </span>
+      <span className="hidden sm:inline">{count} pending</span>
+    </Link>
+  )
+}
+
 export function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
@@ -87,6 +117,9 @@ export function Nav() {
         </div>
 
         <div className="flex-1" />
+
+        {/* Decisions badge */}
+        <DecisionsBadge />
 
         {/* Health indicator */}
         <HealthDot />
